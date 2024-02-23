@@ -15,7 +15,8 @@
 #define H6 0x1f83d9ab
 #define H7 0x5be0cd19
 
-#define SEP "================================================================================================================\n"
+#define SEP "=========================================================================================\n"
+
 
 typedef unsigned long long word64;
 typedef unsigned int word32;
@@ -220,7 +221,7 @@ int main(int argc, char *argv[]) {
         H[7] = h + H[7];
     }
 
-    printf(SEP);
+    // printf(SEP);
 
     printf("%.8x %.8x %.8x %.8x %.8x %.8x %.8x %.8x\n",H[0],H[1],H[2],H[3],H[4],H[5],H[6],H[7]);
 

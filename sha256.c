@@ -6,6 +6,16 @@
 #define MSGMAXLEN 1024
 #define SHA256_CONST_LEN 64
 
+#define H0 0x6a09e667
+#define H1 0xbb67ae85
+#define H2 0x3c6ef372
+#define H3 0xa54ff53a
+#define H4 0x510e527f
+#define H5 0x9b05688c
+#define H6 0x1f83d9ab
+#define H7 0x5be0cd19
+
+
 typedef unsigned long long word64;
 typedef unsigned int word32;
 typedef unsigned char uint8;
@@ -28,6 +38,16 @@ const word32 SHA256_CONST[SHA256_CONST_LEN] = {
     0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 };
+
+word32 SHR(uint8 n, word32 x);                      // SHRⁿ(𝑥) = 𝑥 >> 𝑛
+word32 ROTR(uint8 n, word32 x);                     // ROTLⁿ(𝑥) = (𝑥 << 𝑛) ∨ (𝑥 >> 𝑤-𝑛)
+word32 ROTL(uint8 n, word32 x);                     // ROTRⁿ(𝑥) = (𝑥 >> 𝑛) ∨ (𝑥 << 𝑤-𝑛)
+word32 sha256_ch(word32 x, word32 y, word32 z);     // 𝐶𝐻(𝑥, 𝑦, 𝑧) = (𝑥 ∧ 𝑦) ⊕ (¬𝑥 ∧ 𝑧)
+word32 sha256_maj(word32 x, word32 y, word32 z);    // 𝑀𝐴𝐽(𝑥, 𝑦, 𝑧) = (𝑥 ∧ 𝑦) ⊕ (𝑥 ∧ 𝑧) ⊕ (𝑦 ∧ 𝑧)
+word32 sha256_bsigma_0(word32 x);                   // Σ₀(𝑥) = ROTR²(𝑥) ⊕ ROTR¹³(𝑥) ⊕ ROTR²²(𝑥)
+word32 sha256_bsigma_1(word32 x);                   // Σ₁(𝑥) = ROTR⁶(𝑥) ⊕ ROTR¹¹(𝑥) ⊕ ROTR²⁵(𝑥)
+word32 sha256_ssigma_0(word32 x);                   // σ₀(𝑥) = ROTR⁷(𝑥) ⊕ ROTR¹⁸(𝑥) ⊕ SHR³(𝑥)
+word32 sha256_ssigma_1(word32 x);                   // σ₁(𝑥) = ROTR¹⁷(𝑥) ⊕ ROTR¹⁹(𝑥) ⊕ SHR¹⁰(𝑥)
 
 
 int main(int argc, char *argv[]) {
@@ -135,7 +155,46 @@ int main(int argc, char *argv[]) {
         );
     }
     printf("================-================-================-================-================-================-================-================\n");
-    printf("done!");
+    printf("done!\n");
 
     return EXIT_SUCCESS;
+}
+
+
+word32 SHR(uint8 n, word32 x) {
+    return x>>(n%32);
+}
+
+word32 ROTL(uint8 n, word32 x) {
+    n = n%32;
+    return (x>>n) | (x<<(32-n));
+}
+
+word32 ROTR(uint8 n, word32 x) {
+    n = n%32;
+    return (x<<n) | (x>>(32-n));
+}
+
+word32 sha256_ch(word32 x, word32 y, word32 z) {
+    return (x&y) ^ (~x&z);
+}
+
+word32 sha256_maj(word32 x, word32 y, word32 z) {
+    return (x&y) ^ (x&z) ^ (y&z);
+}
+
+word32 sha256_bsigma_0(word32 x) {
+    return ROTR(2,x) ^ ROTR(13,x) ^ ROTR(22,x);
+}
+
+word32 sha256_bsigma_1(word32 x) {
+    return ROTR(6,x) ^ ROTR(11,x) ^ ROTR(25,x);
+}
+
+word32 sha256_ssigma_0(word32 x) {
+    return ROTR(7,x) ^ ROTR(18,x) ^ SHR(3,x);
+}
+
+word32 sha256_ssigma_1(word32 x) {
+    return ROTR(17,x) ^ ROTR(19,x) ^ SHR(10,x);
 }

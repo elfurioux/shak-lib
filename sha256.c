@@ -15,6 +15,7 @@
 #define H6 0x1f83d9ab
 #define H7 0x5be0cd19
 
+#define SEP "================================================================================================================\n"
 
 typedef unsigned long long word64;
 typedef unsigned int word32;
@@ -67,7 +68,7 @@ int main(int argc, char *argv[]) {
     /* ==================================== MESSAGE PADDING ==================================== */
 
     // lenghts are in bits
-    int msglen = strlen(argv[1])*8;
+    word64 msglen = strlen(argv[1])*8;
     int lblen = (msglen+1)%512; // last block lenght
     int zbitcount = -1;
     if (lblen <=448) {
@@ -80,7 +81,7 @@ int main(int argc, char *argv[]) {
     printf("l=%d=(%d*512+%d) k=%d\n",msglen,msglen/512,msglen%512,zbitcount);
     printf("l+1+k = %d = %dmod512\n",(msglen+1+zbitcount),(msglen+1+zbitcount)%512);
     printf("block_count=%d\n",block_count);
-    printf("================-================-================-================-================-================-================-================\n");
+    printf(SEP);
 
     // puts the characters in the word8 message array
     word8 message[MSGMAXLEN];
@@ -99,25 +100,13 @@ int main(int argc, char *argv[]) {
     }
     // appends the message lenght to the end of the message blocks
     int j = i; // offset
-    word64 msglen_o = msglen/8;
     for (i = 0; i < 8; i++) {
-        message[j+i] = (word8)(msglen_o>>56);
-        msglen_o = msglen_o<<8;
+        message[j+i] = (word8)(msglen>>56);
+        msglen = msglen<<8;
     }
 
-    // Prints the unparsed message blocks
-    for (int i = 0; i < block_count*64 ; i++) {
-        printf("%.2X",message[i]);
-        if (i%64 == 63) {
-            printf("\n");
-        } else if (i%8==7) {
-            printf(" ");
-        }
-    }
-    printf("================-================-================-================-================-================-================-================\n");
 
-
-    /* =================================== PARSE THE MESSAGE =================================== */
+    /* ================================== PARSING THE MESSAGE ================================== */
 
     BLOCK mblocks[block_count];
     int offset = 0;
@@ -154,25 +143,104 @@ int main(int argc, char *argv[]) {
             mblocks[i].w12,mblocks[i].w13,mblocks[i].w14,mblocks[i].w15
         );
     }
-    printf("================-================-================-================-================-================-================-================\n");
-    printf("done!\n");
+    printf(SEP);
+
+    /* ================================ ACTUAL HASH COMPUTATION ================================ */
+
+    word32 a = 0;
+    word32 b = 0;
+    word32 c = 0;
+    word32 d = 0;
+    word32 e = 0;
+    word32 f = 0;
+    word32 g = 0;
+    word32 h = 0;
+    word32 tmp1 = 0;
+    word32 tmp2 = 0;
+
+    word32 H[8] = {H0,H1,H2,H3,H4,H5,H6,H7}; // hash values, at the end of the computation this array will be the final hash
+    word32 W[64]; // message schedule values
+
+    // printf("         A        B        C        D        E        F        G        H    \n");
+    for (int m = 0; m < block_count; m++) { // executed for each message block
+        // preparing message schedule
+        W[0]  = mblocks[m].w0;
+        W[1]  = mblocks[m].w1;
+        W[2]  = mblocks[m].w2;
+        W[3]  = mblocks[m].w3;
+        W[4]  = mblocks[m].w4;
+        W[5]  = mblocks[m].w5;
+        W[6]  = mblocks[m].w6;
+        W[7]  = mblocks[m].w7;
+        W[8]  = mblocks[m].w8;
+        W[9]  = mblocks[m].w9;
+        W[10] = mblocks[m].w10;
+        W[11] = mblocks[m].w11;
+        W[12] = mblocks[m].w12;
+        W[13] = mblocks[m].w13;
+        W[14] = mblocks[m].w14;
+        W[15] = mblocks[m].w15;
+        for (int t = 16; t < 64; t++) {
+            W[t] = sha256_ssigma_1(W[t-2]) + W[t-7] + sha256_ssigma_0(W[t-15]) + W[t-16];
+        }
+
+        // init the working variables with the precedent hash values
+        a = H[0];
+        b = H[1];
+        c = H[2];
+        d = H[3];
+        e = H[4];
+        f = H[5];
+        g = H[6];
+        h = H[7];
+
+        // actual core hash process
+        for (int t = 0; t < 64; t++) {
+            tmp1 = h + sha256_bsigma_1(e) + sha256_ch(e,f,g) + SHA256_CONST[t] + W[t];
+            tmp2 = sha256_bsigma_0(a) + sha256_maj(a,b,c);
+            h = g;
+            g = f;
+            f = e;
+            e = d + tmp1;
+            d = c;
+            c = b;
+            b = a;
+            a = tmp1 + tmp2;
+            // printf("t=%2u: %.8X %.8X %.8X %.8X %.8X %.8X %.8X %.8X\n", t, a, b, c, d, e, f, g, h);
+        }
+
+        // compute the m'th intermediate hash values
+        H[0] = a + H[0];
+        H[1] = b + H[1];
+        H[2] = c + H[2];
+        H[3] = d + H[3];
+        H[4] = e + H[4];
+        H[5] = f + H[5];
+        H[6] = g + H[6];
+        H[7] = h + H[7];
+    }
+
+    printf(SEP);
+
+    printf("%.8x %.8x %.8x %.8x %.8x %.8x %.8x %.8x\n",H[0],H[1],H[2],H[3],H[4],H[5],H[6],H[7]);
 
     return EXIT_SUCCESS;
 }
 
 
 word32 SHR(uint8 n, word32 x) {
-    return x>>(n%32);
+    n = n%32;
+    return x>>n;
 }
 
 word32 ROTL(uint8 n, word32 x) {
     n = n%32;
-    return (x>>n) | (x<<(32-n));
+    return (x<<n) | (x>>(32-n));
 }
 
 word32 ROTR(uint8 n, word32 x) {
     n = n%32;
-    return (x<<n) | (x>>(32-n));
+    return (x>>n) | (x<<(32-n));
 }
 
 word32 sha256_ch(word32 x, word32 y, word32 z) {

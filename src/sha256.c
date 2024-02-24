@@ -21,13 +21,14 @@
 typedef unsigned long long word64;
 typedef unsigned int word32;
 typedef unsigned char uint8;
+typedef unsigned short uint16;
 typedef unsigned char word8;
-typedef struct BLOCK {
+typedef struct BLOCK32 {
     word32 w0;  word32 w1;  word32 w2;  word32 w3;
     word32 w4;  word32 w5;  word32 w6;  word32 w7;
     word32 w8;  word32 w9;  word32 w10; word32 w11;
     word32 w12; word32 w13; word32 w14; word32 w15;
-}BLOCK;
+}BLOCK32;
 
 
 const word32 SHA256_CONST[SHA256_CONST_LEN] = {
@@ -50,6 +51,10 @@ word32 sha256_bsigma_0(word32 x);                   // Σ₀(𝑥) = ROTR²(𝑥
 word32 sha256_bsigma_1(word32 x);                   // Σ₁(𝑥) = ROTR⁶(𝑥) ⊕ ROTR¹¹(𝑥) ⊕ ROTR²⁵(𝑥)
 word32 sha256_ssigma_0(word32 x);                   // σ₀(𝑥) = ROTR⁷(𝑥) ⊕ ROTR¹⁸(𝑥) ⊕ SHR³(𝑥)
 word32 sha256_ssigma_1(word32 x);                   // σ₁(𝑥) = ROTR¹⁷(𝑥) ⊕ ROTR¹⁹(𝑥) ⊕ SHR¹⁰(𝑥)
+uint16 get_zbitcount(word64 msglen, const int BLOCKSIZE);
+word64 get_block_count(word64 msglen, const int BLOCKSIZE);
+void sha256_parse(BLOCK32* mblocks, word64 block_count, word8* message);
+void sha256_digest(word32* H, BLOCK32* mblocks, int block_count);
 
 
 int main(int argc, char *argv[]) {
@@ -68,21 +73,16 @@ int main(int argc, char *argv[]) {
 
     /* ==================================== MESSAGE PADDING ==================================== */
 
-    // lenghts are in bits
     word64 msglen = strlen(argv[1])*8;
-    int lblen = (msglen+1)%512; // last block lenght
-    int zbitcount = -1;
-    if (lblen <=448) {
-        zbitcount = 448 - lblen;
-    } else {
-        zbitcount = (512+448) - lblen; // 960 - lblen
-    }
-    int block_count = (msglen+1 + zbitcount + 64)/512;
+    word64 block_count = get_block_count(msglen,512);
+    uint16 zbitcount = get_zbitcount(msglen,512);
 
+    /*
     printf("l=%d=(%d*512+%d) k=%d\n",msglen,msglen/512,msglen%512,zbitcount);
     printf("l+1+k = %d = %dmod512\n",(msglen+1+zbitcount),(msglen+1+zbitcount)%512);
     printf("block_count=%d\n",block_count);
     printf(SEP);
+    */
 
     // puts the characters in the word8 message array
     word8 message[MSGMAXLEN];
@@ -107,9 +107,58 @@ int main(int argc, char *argv[]) {
     }
 
 
-    /* ================================== PARSING THE MESSAGE ================================== */
+    /* PARSING THE MESSAGE */
 
-    BLOCK mblocks[block_count];
+    BLOCK32 mblocks[block_count];
+    sha256_parse(mblocks, block_count, message);
+
+    /*
+    // prints the message blocks, parsed this time
+    for (int i = 0; i < block_count; i++) {
+        printf("%.8X%.8X %.8X%.8X %.8X%.8X %.8X%.8X %.8X%.8X %.8X%.8X %.8X%.8X %.8X%.8X\n",
+            mblocks[i].w0,mblocks[i].w1,mblocks[i].w2,mblocks[i].w3,
+            mblocks[i].w4,mblocks[i].w5,mblocks[i].w6,mblocks[i].w7,
+            mblocks[i].w8,mblocks[i].w9,mblocks[i].w10,mblocks[i].w11,
+            mblocks[i].w12,mblocks[i].w13,mblocks[i].w14,mblocks[i].w15
+        );
+    }
+    printf(SEP);
+    */
+
+    /* ACTUAL HASH COMPUTATION */
+
+    word32 H[8];
+    sha256_digest(H, mblocks, block_count);
+
+    // printf("%.8x %.8x %.8x %.8x %.8x %.8x %.8x %.8x\n",H[0],H[1],H[2],H[3],H[4],H[5],H[6],H[7]);
+    printf("sha256: 0x%.8x%.8x%.8x%.8x%.8x%.8x%.8x%.8x\n",H[0],H[1],H[2],H[3],H[4],H[5],H[6],H[7]);
+
+    return EXIT_SUCCESS;
+}
+
+
+uint16 get_zbitcount(word64 msglen, const int BLOCKSIZE) {
+    uint16 lblen = (msglen+1) % BLOCKSIZE; // last block lenght
+    uint16 zbitcount = -1;
+
+    if (lblen <= BLOCKSIZE*.875) {
+        zbitcount = BLOCKSIZE*.875 - lblen;
+    } else {
+        zbitcount = (BLOCKSIZE+BLOCKSIZE*.875) - lblen; // 960 - lblen; for BLOCKSIZE = 512
+    }
+
+    return zbitcount;
+}
+
+word64 get_block_count(word64 msglen, const int BLOCKSIZE) {
+    // lenghts are in bits
+
+    word64 block_count = (msglen+1 + get_zbitcount(msglen, BLOCKSIZE) + 64)/BLOCKSIZE;
+
+    return block_count;
+}
+
+void sha256_parse(BLOCK32* mblocks, word64 block_count, word8* message) {
     int offset = 0;
     for (int i = 0; i < block_count; i++) {
         offset = (i*512)/8;
@@ -134,20 +183,10 @@ int main(int argc, char *argv[]) {
         mblocks[i].w14   = (word32)(message[offset+8]<<24)  + (word32)(message[offset+9]<<16)  + (word32)(message[offset+10]<<8) +(word32)(message[offset+11]);
         mblocks[i].w15   = (word32)(message[offset+12]<<24) + (word32)(message[offset+13]<<16) + (word32)(message[offset+14]<<8) +(word32)(message[offset+15]);
     }
+}
 
-    // prints the message blocks, parsed this time
-    for (int i = 0; i < block_count; i++) {
-        printf("%.8X%.8X %.8X%.8X %.8X%.8X %.8X%.8X %.8X%.8X %.8X%.8X %.8X%.8X %.8X%.8X\n",
-            mblocks[i].w0,mblocks[i].w1,mblocks[i].w2,mblocks[i].w3,
-            mblocks[i].w4,mblocks[i].w5,mblocks[i].w6,mblocks[i].w7,
-            mblocks[i].w8,mblocks[i].w9,mblocks[i].w10,mblocks[i].w11,
-            mblocks[i].w12,mblocks[i].w13,mblocks[i].w14,mblocks[i].w15
-        );
-    }
-    printf(SEP);
-
-    /* ================================ ACTUAL HASH COMPUTATION ================================ */
-
+void sha256_digest(word32* H, BLOCK32* mblocks, int block_count) {
+    
     word32 a = 0;
     word32 b = 0;
     word32 c = 0;
@@ -159,7 +198,15 @@ int main(int argc, char *argv[]) {
     word32 tmp1 = 0;
     word32 tmp2 = 0;
 
-    word32 H[8] = {H0,H1,H2,H3,H4,H5,H6,H7}; // hash values, at the end of the computation this array will be the final hash
+    // hash values, at the end of the computation this array will be the final hash
+    H[0] = H0;
+    H[1] = H1;
+    H[2] = H2;
+    H[3] = H3;
+    H[4] = H4;
+    H[5] = H5;
+    H[6] = H6;
+    H[7] = H7;
     word32 W[64]; // message schedule values
 
     // printf("         A        B        C        D        E        F        G        H    \n");
@@ -220,14 +267,7 @@ int main(int argc, char *argv[]) {
         H[6] = g + H[6];
         H[7] = h + H[7];
     }
-
-    // printf(SEP);
-
-    printf("%.8x %.8x %.8x %.8x %.8x %.8x %.8x %.8x\n",H[0],H[1],H[2],H[3],H[4],H[5],H[6],H[7]);
-
-    return EXIT_SUCCESS;
 }
-
 
 word32 SHR(uint8 n, word32 x) {
     n = n%32;

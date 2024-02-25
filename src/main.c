@@ -207,16 +207,19 @@ int argparse(int argc, char *argv[], hash_type* htype, verbose* vblevel) {
             } else if (strlen(argv[o])==11) {
                 chr = argv[o][10];
             } else {
-                fprintf(stderr, "ERROR: argunent \"%s\" is invalid.\n" USAGE_HELP "\n", argv[o], argv[0]);
+                fprintf(stderr, "ERROR: argument \"%s\" is invalid.\n" USAGE_HELP "\n", argv[o], argv[0]);
                 return EXIT_FAILURE;
             }
 
             chr -= 48; // 48 is the decimal place of the 0 in the ASCII table
             if (chr < 0 || chr > 2) {
-                fprintf(stderr, "ERROR: argunent \"%s\" is invalid.\n" USAGE_HELP "\n", argv[o], argv[0]);
+                fprintf(stderr, "ERROR: argument \"%s\" is invalid.\n" USAGE_HELP "\n", argv[o], argv[0]);
                 return EXIT_FAILURE;
             }
             *vblevel = chr;
+        } else {
+            fprintf(stderr, "ERROR: unrecognised argument \"%s\"\n" USAGE_HELP "\n", argv[o], argv[0]);
+            return EXIT_FAILURE;
         }
     }
 

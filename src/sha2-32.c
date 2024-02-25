@@ -1,30 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+
 #include "../include/shacom.h"
+#include "../include/sha2-32.h"
 
 
-#define MSGMAXLEN 1024
 #define SHA256_CONST_LEN 64
 
-#define H0 0x6a09e667
-#define H1 0xbb67ae85
-#define H2 0x3c6ef372
-#define H3 0xa54ff53a
-#define H4 0x510e527f
-#define H5 0x9b05688c
-#define H6 0x1f83d9ab
-#define H7 0x5be0cd19
-
-#define SEP "=========================================================================================\n"
-
-
-typedef struct BLOCK32 {
-    word32 w0;  word32 w1;  word32 w2;  word32 w3;
-    word32 w4;  word32 w5;  word32 w6;  word32 w7;
-    word32 w8;  word32 w9;  word32 w10; word32 w11;
-    word32 w12; word32 w13; word32 w14; word32 w15;
-}BLOCK32;
+#define SHA256_H0 0x6a09e667
+#define SHA256_H1 0xbb67ae85
+#define SHA256_H2 0x3c6ef372
+#define SHA256_H3 0xa54ff53a
+#define SHA256_H4 0x510e527f
+#define SHA256_H5 0x9b05688c
+#define SHA256_H6 0x1f83d9ab
+#define SHA256_H7 0x5be0cd19
 
 
 const word32 SHA256_K[SHA256_CONST_LEN] = {
@@ -39,130 +29,20 @@ const word32 SHA256_K[SHA256_CONST_LEN] = {
 };
 
 
-// {256} Σ₀(𝑥) = ROTR²(𝑥) ⊕ ROTR¹³(𝑥) ⊕ ROTR²²(𝑥)
-word32 sha256_bsigma_0(word32 x);
-// {256} Σ₁(𝑥) = ROTR⁶(𝑥) ⊕ ROTR¹¹(𝑥) ⊕ ROTR²⁵(𝑥)
-word32 sha256_bsigma_1(word32 x);
-// {256} σ₀(𝑥) = ROTR⁷(𝑥) ⊕ ROTR¹⁸(𝑥) ⊕ SHR³(𝑥)
-word32 sha256_ssigma_0(word32 x);
-// {256} σ₁(𝑥) = ROTR¹⁷(𝑥) ⊕ ROTR¹⁹(𝑥) ⊕ SHR¹⁰(𝑥)
-word32 sha256_ssigma_1(word32 x);
-
-// {512} Σ₀(𝑥) = ROTR²⁸(𝑥) ⊕ ROTR³⁴(𝑥) ⊕ ROTR³⁹(𝑥)
-word64 sha512_bsigma_0(word64 x);
-// {512} Σ₁(𝑥) = ROTR¹⁴(𝑥) ⊕ ROTR¹⁸(𝑥) ⊕ ROTR⁴¹(𝑥)
-word64 sha512_bsigma_1(word64 x);
-// {512} σ₀(𝑥) = ROTR¹(𝑥) ⊕ ROTR⁸(𝑥) ⊕ SHR⁷(𝑥)
-word64 sha512_ssigma_0(word64 x);
-// {512} σ₁(𝑥) = ROTR¹⁹(𝑥) ⊕ ROTR⁶¹(𝑥) ⊕ SHR⁶(𝑥)
-word64 sha512_ssigma_1(word64 x);
-
-uint16 get_zbitcount(word64 msglen, const int BLOCKSIZE);
-word64 get_block_count(word64 msglen, const int BLOCKSIZE);
-void sha256_parse(BLOCK32* mblocks, word64 block_count, word8* message);
-void sha256_digest(word32* H, BLOCK32* mblocks, int block_count);
-
-
-int main(int argc, char *argv[]) {
-    if (argc > 2) {
-        fprintf(stderr, "USAGE: %s <message>", argv[0]);
-        return EXIT_FAILURE;
-    } else if (argc == 1) {
-        argv[1] = "\0";
-    }
-
-    if (strlen(argv[1]) > MSGMAXLEN) {
-        fprintf(stderr, "ERROR: <message> IS OVER %d BYTES. NOT SUPPORTED AT THE MOMENT.", MSGMAXLEN);
-        return EXIT_FAILURE;
-    }
-
-
-    /* MESSAGE PADDING */
-
-    word64 msglen = strlen(argv[1])*8;
-    word64 block_count = get_block_count(msglen,512);
-    uint16 zbitcount = get_zbitcount(msglen,512);
-
-    // TODO: Verbose mode
-    /*
-    printf("l=%d=(%d*512+%d) k=%d\n",msglen,msglen/512,msglen%512,zbitcount);
-    printf("l+1+k = %d = %dmod512\n",(msglen+1+zbitcount),(msglen+1+zbitcount)%512);
-    printf("block_count=%d\n",block_count);
-    printf(SEP);
-    */
-
-    // puts the characters in the word8 message array
-    word8 message[MSGMAXLEN];
-    int i = 0;
-    while (zbitcount > 0) {
-        if (i < msglen/8) {
-            message[i] = argv[1][i];
-        } else if (i == msglen/8) {
-            zbitcount -= 7;
-            message[i] = 0b10000000;
-        } else {
-            zbitcount -= 8;
-            message[i] = 0b00000000;
-        }
-        i++;
-    }
-    // appends the message lenght to the end of the message blocks
-    int j = i; // offset
-    for (i = 0; i < 8; i++) {
-        message[j+i] = (word8)(msglen>>56);
-        msglen = msglen<<8;
-    }
-
-
-    /* PARSING THE MESSAGE */
-
-    BLOCK32 mblocks[block_count];
-    sha256_parse(mblocks, block_count, message);
-
-    /*
-    // prints the message blocks, parsed this time
-    for (int i = 0; i < block_count; i++) {
-        printf("%.8X%.8X %.8X%.8X %.8X%.8X %.8X%.8X %.8X%.8X %.8X%.8X %.8X%.8X %.8X%.8X\n",
-            mblocks[i].w0,mblocks[i].w1,mblocks[i].w2,mblocks[i].w3,
-            mblocks[i].w4,mblocks[i].w5,mblocks[i].w6,mblocks[i].w7,
-            mblocks[i].w8,mblocks[i].w9,mblocks[i].w10,mblocks[i].w11,
-            mblocks[i].w12,mblocks[i].w13,mblocks[i].w14,mblocks[i].w15
-        );
-    }
-    printf(SEP);
-    */
-
-    /* ACTUAL HASH COMPUTATION */
-
-    word32 H[8];
-    sha256_digest(H, mblocks, block_count);
-
-    // printf("%.8x %.8x %.8x %.8x %.8x %.8x %.8x %.8x\n",H[0],H[1],H[2],H[3],H[4],H[5],H[6],H[7]);
-    printf("sha256: 0x%.8x%.8x%.8x%.8x%.8x%.8x%.8x%.8x\n",H[0],H[1],H[2],H[3],H[4],H[5],H[6],H[7]);
-
-    return EXIT_SUCCESS;
+word32 sha256_bsigma_0(word32 x) {
+    return ROTR(2,x) ^ ROTR(13,x) ^ ROTR(22,x);
 }
 
-
-uint16 get_zbitcount(word64 msglen, const int BLOCKSIZE) {
-    uint16 lblen = (msglen+1) % BLOCKSIZE; // last block lenght
-    uint16 zbitcount = -1;
-
-    if (lblen <= BLOCKSIZE*.875) {
-        zbitcount = BLOCKSIZE*.875 - lblen;
-    } else {
-        zbitcount = (BLOCKSIZE+BLOCKSIZE*.875) - lblen; // 960 - lblen; for BLOCKSIZE = 512
-    }
-
-    return zbitcount;
+word32 sha256_bsigma_1(word32 x) {
+    return ROTR(6,x) ^ ROTR(11,x) ^ ROTR(25,x);
 }
 
-word64 get_block_count(word64 msglen, const int BLOCKSIZE) {
-    // lenghts are in bits
+word32 sha256_ssigma_0(word32 x) {
+    return ROTR(7,x) ^ ROTR(18,x) ^ SHR(3,x);
+}
 
-    word64 block_count = (msglen+1 + get_zbitcount(msglen, BLOCKSIZE) + 64)/BLOCKSIZE;
-
-    return block_count;
+word32 sha256_ssigma_1(word32 x) {
+    return ROTR(17,x) ^ ROTR(19,x) ^ SHR(10,x);
 }
 
 void sha256_parse(BLOCK32* mblocks, word64 block_count, word8* message) {
@@ -206,14 +86,14 @@ void sha256_digest(word32* H, BLOCK32* mblocks, int block_count) {
     word32 tmp2 = 0;
 
     // hash values, at the end of the computation this array will be the final hash
-    H[0] = H0;
-    H[1] = H1;
-    H[2] = H2;
-    H[3] = H3;
-    H[4] = H4;
-    H[5] = H5;
-    H[6] = H6;
-    H[7] = H7;
+    H[0] = SHA256_H0;
+    H[1] = SHA256_H1;
+    H[2] = SHA256_H2;
+    H[3] = SHA256_H3;
+    H[4] = SHA256_H4;
+    H[5] = SHA256_H5;
+    H[6] = SHA256_H6;
+    H[7] = SHA256_H7;
     word32 W[64]; // message schedule values
 
     // printf("         A        B        C        D        E        F        G        H    \n");
@@ -274,21 +154,4 @@ void sha256_digest(word32* H, BLOCK32* mblocks, int block_count) {
         H[6] = g + H[6];
         H[7] = h + H[7];
     }
-}
-
-
-word32 sha256_bsigma_0(word32 x) {
-    return ROTR(2,x) ^ ROTR(13,x) ^ ROTR(22,x);
-}
-
-word32 sha256_bsigma_1(word32 x) {
-    return ROTR(6,x) ^ ROTR(11,x) ^ ROTR(25,x);
-}
-
-word32 sha256_ssigma_0(word32 x) {
-    return ROTR(7,x) ^ ROTR(18,x) ^ SHR(3,x);
-}
-
-word32 sha256_ssigma_1(word32 x) {
-    return ROTR(17,x) ^ ROTR(19,x) ^ SHR(10,x);
 }

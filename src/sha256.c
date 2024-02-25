@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../include/shacom.h"
 
 
 #define MSGMAXLEN 1024
@@ -18,11 +19,6 @@
 #define SEP "=========================================================================================\n"
 
 
-typedef unsigned long long word64;
-typedef unsigned int word32;
-typedef unsigned char uint8;
-typedef unsigned short uint16;
-typedef unsigned char word8;
 typedef struct BLOCK32 {
     word32 w0;  word32 w1;  word32 w2;  word32 w3;
     word32 w4;  word32 w5;  word32 w6;  word32 w7;
@@ -31,7 +27,7 @@ typedef struct BLOCK32 {
 }BLOCK32;
 
 
-const word32 SHA256_CONST[SHA256_CONST_LEN] = {
+const word32 SHA256_K[SHA256_CONST_LEN] = {
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
     0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
@@ -42,15 +38,25 @@ const word32 SHA256_CONST[SHA256_CONST_LEN] = {
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 };
 
-word32 SHR(uint8 n, word32 x);                      // SHRⁿ(𝑥) = 𝑥 >> 𝑛
-word32 ROTR(uint8 n, word32 x);                     // ROTLⁿ(𝑥) = (𝑥 << 𝑛) ∨ (𝑥 >> 𝑤-𝑛)
-word32 ROTL(uint8 n, word32 x);                     // ROTRⁿ(𝑥) = (𝑥 >> 𝑛) ∨ (𝑥 << 𝑤-𝑛)
-word32 sha256_ch(word32 x, word32 y, word32 z);     // 𝐶𝐻(𝑥, 𝑦, 𝑧) = (𝑥 ∧ 𝑦) ⊕ (¬𝑥 ∧ 𝑧)
-word32 sha256_maj(word32 x, word32 y, word32 z);    // 𝑀𝐴𝐽(𝑥, 𝑦, 𝑧) = (𝑥 ∧ 𝑦) ⊕ (𝑥 ∧ 𝑧) ⊕ (𝑦 ∧ 𝑧)
-word32 sha256_bsigma_0(word32 x);                   // Σ₀(𝑥) = ROTR²(𝑥) ⊕ ROTR¹³(𝑥) ⊕ ROTR²²(𝑥)
-word32 sha256_bsigma_1(word32 x);                   // Σ₁(𝑥) = ROTR⁶(𝑥) ⊕ ROTR¹¹(𝑥) ⊕ ROTR²⁵(𝑥)
-word32 sha256_ssigma_0(word32 x);                   // σ₀(𝑥) = ROTR⁷(𝑥) ⊕ ROTR¹⁸(𝑥) ⊕ SHR³(𝑥)
-word32 sha256_ssigma_1(word32 x);                   // σ₁(𝑥) = ROTR¹⁷(𝑥) ⊕ ROTR¹⁹(𝑥) ⊕ SHR¹⁰(𝑥)
+
+// {256} Σ₀(𝑥) = ROTR²(𝑥) ⊕ ROTR¹³(𝑥) ⊕ ROTR²²(𝑥)
+word32 sha256_bsigma_0(word32 x);
+// {256} Σ₁(𝑥) = ROTR⁶(𝑥) ⊕ ROTR¹¹(𝑥) ⊕ ROTR²⁵(𝑥)
+word32 sha256_bsigma_1(word32 x);
+// {256} σ₀(𝑥) = ROTR⁷(𝑥) ⊕ ROTR¹⁸(𝑥) ⊕ SHR³(𝑥)
+word32 sha256_ssigma_0(word32 x);
+// {256} σ₁(𝑥) = ROTR¹⁷(𝑥) ⊕ ROTR¹⁹(𝑥) ⊕ SHR¹⁰(𝑥)
+word32 sha256_ssigma_1(word32 x);
+
+// {512} Σ₀(𝑥) = ROTR²⁸(𝑥) ⊕ ROTR³⁴(𝑥) ⊕ ROTR³⁹(𝑥)
+word64 sha512_bsigma_0(word64 x);
+// {512} Σ₁(𝑥) = ROTR¹⁴(𝑥) ⊕ ROTR¹⁸(𝑥) ⊕ ROTR⁴¹(𝑥)
+word64 sha512_bsigma_1(word64 x);
+// {512} σ₀(𝑥) = ROTR¹(𝑥) ⊕ ROTR⁸(𝑥) ⊕ SHR⁷(𝑥)
+word64 sha512_ssigma_0(word64 x);
+// {512} σ₁(𝑥) = ROTR¹⁹(𝑥) ⊕ ROTR⁶¹(𝑥) ⊕ SHR⁶(𝑥)
+word64 sha512_ssigma_1(word64 x);
+
 uint16 get_zbitcount(word64 msglen, const int BLOCKSIZE);
 word64 get_block_count(word64 msglen, const int BLOCKSIZE);
 void sha256_parse(BLOCK32* mblocks, word64 block_count, word8* message);
@@ -71,12 +77,13 @@ int main(int argc, char *argv[]) {
     }
 
 
-    /* ==================================== MESSAGE PADDING ==================================== */
+    /* MESSAGE PADDING */
 
     word64 msglen = strlen(argv[1])*8;
     word64 block_count = get_block_count(msglen,512);
     uint16 zbitcount = get_zbitcount(msglen,512);
 
+    // TODO: Verbose mode
     /*
     printf("l=%d=(%d*512+%d) k=%d\n",msglen,msglen/512,msglen%512,zbitcount);
     printf("l+1+k = %d = %dmod512\n",(msglen+1+zbitcount),(msglen+1+zbitcount)%512);
@@ -244,8 +251,8 @@ void sha256_digest(word32* H, BLOCK32* mblocks, int block_count) {
 
         // actual core hash process
         for (int t = 0; t < 64; t++) {
-            tmp1 = h + sha256_bsigma_1(e) + sha256_ch(e,f,g) + SHA256_CONST[t] + W[t];
-            tmp2 = sha256_bsigma_0(a) + sha256_maj(a,b,c);
+            tmp1 = h + sha256_bsigma_1(e) + ch(e,f,g) + SHA256_K[t] + W[t];
+            tmp2 = sha256_bsigma_0(a) + maj(a,b,c);
             h = g;
             g = f;
             f = e;
@@ -269,28 +276,6 @@ void sha256_digest(word32* H, BLOCK32* mblocks, int block_count) {
     }
 }
 
-word32 SHR(uint8 n, word32 x) {
-    n = n%32;
-    return x>>n;
-}
-
-word32 ROTL(uint8 n, word32 x) {
-    n = n%32;
-    return (x<<n) | (x>>(32-n));
-}
-
-word32 ROTR(uint8 n, word32 x) {
-    n = n%32;
-    return (x>>n) | (x<<(32-n));
-}
-
-word32 sha256_ch(word32 x, word32 y, word32 z) {
-    return (x&y) ^ (~x&z);
-}
-
-word32 sha256_maj(word32 x, word32 y, word32 z) {
-    return (x&y) ^ (x&z) ^ (y&z);
-}
 
 word32 sha256_bsigma_0(word32 x) {
     return ROTR(2,x) ^ ROTR(13,x) ^ ROTR(22,x);

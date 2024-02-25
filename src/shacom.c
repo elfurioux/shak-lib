@@ -1,5 +1,26 @@
 #include "../include/shacom.h"
 
+uint16 get_zbitcount(word64 msglen, const int BLOCKSIZE) {
+    uint16 lblen = (msglen+1) % BLOCKSIZE; // last block lenght
+    uint16 zbitcount = -1;
+
+    if (lblen <= BLOCKSIZE*.875) {
+        zbitcount = BLOCKSIZE*.875 - lblen;
+    } else {
+        zbitcount = (BLOCKSIZE+BLOCKSIZE*.875) - lblen; // 960 - lblen; for BLOCKSIZE = 512
+    }
+
+    return zbitcount;
+}
+
+word64 get_block_count(word64 msglen, const int BLOCKSIZE) {
+    // lenghts are in bits
+
+    word64 block_count = (msglen+1 + get_zbitcount(msglen, BLOCKSIZE) + 64)/BLOCKSIZE;
+
+    return block_count;
+}
+
 word32 SHR(uint8 n, word32 x) {
     n = n%32;
     return x>>n;

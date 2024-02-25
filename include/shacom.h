@@ -1,3 +1,11 @@
+/*
+ * SHACOM - Sha Common Functions
+ * 
+ * This file indexes functions that are used
+ * by multiple SHA functions.
+ * 
+*/
+
 #ifndef __SHACOM_H__
 #define __SHACOM_H__
 
@@ -14,6 +22,22 @@ typedef uint64 word64;
 typedef uint32 word32;
 typedef uint8 word8;
 
+typedef struct BLOCK32 {
+    word32 w0;  word32 w1;  word32 w2;  word32 w3;
+    word32 w4;  word32 w5;  word32 w6;  word32 w7;
+    word32 w8;  word32 w9;  word32 w10; word32 w11;
+    word32 w12; word32 w13; word32 w14; word32 w15;
+}BLOCK32;
+typedef struct BLOCK64 {
+    word64 w0;  word64 w1;  word64 w2;  word64 w3;
+    word64 w4;  word64 w5;  word64 w6;  word64 w7;
+    word64 w8;  word64 w9;  word64 w10; word64 w11;
+    word64 w12; word64 w13; word64 w14; word64 w15;
+}BLOCK64;
+
+
+uint16 get_zbitcount(word64 msglen, const int BLOCKSIZE);
+word64 get_block_count(word64 msglen, const int BLOCKSIZE);
 
 // SHRⁿ(𝑥) = 𝑥 >> 𝑛
 word32 SHR(uint8 n, word32 x);

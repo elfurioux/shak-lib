@@ -10,6 +10,9 @@
 #define __SHACOM_H__
 
 
+#define SEP "==============================\n"
+
+
 typedef unsigned long long uint64;
 typedef unsigned int uint32;
 typedef unsigned short uint16;
@@ -21,6 +24,13 @@ typedef unsigned char uint8;
 typedef uint64 word64;
 typedef uint32 word32;
 typedef uint8 word8;
+
+typedef enum verbose {
+    VERBOSE_NONE_DEFAULT = -1,
+    VERBOSE_NONE = 0,
+    VERBOSE_NORMAL = 1,
+    VERBOSE_MAX = 2
+} verbose;
 
 typedef struct BLOCK32 {
     word32 w0;  word32 w1;  word32 w2;  word32 w3;

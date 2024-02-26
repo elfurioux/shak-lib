@@ -16,6 +16,15 @@
 #define SHA256_H6 0x1f83d9ab
 #define SHA256_H7 0x5be0cd19
 
+#define SHA224_H0 0xc1059ed8
+#define SHA224_H1 0x367cd507
+#define SHA224_H2 0x3070dd17
+#define SHA224_H3 0xf70e5939
+#define SHA224_H4 0xffc00b31
+#define SHA224_H5 0x68581511
+#define SHA224_H6 0x64f98fa7
+#define SHA224_H7 0xbefa4fa4
+
 
 const word32 SHA256_K[SHA256_CONST_LEN] = {
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -72,8 +81,7 @@ void sha256_parse(BLOCK32* mblocks, word64 block_count, word8* message) {
     }
 }
 
-void sha256_digest(word32* H, BLOCK32* mblocks, int block_count) {
-    
+void sha256_digest(word32* H, BLOCK32* mblocks, int block_count, verbose vbtype) {
     word32 a = 0;
     word32 b = 0;
     word32 c = 0;
@@ -96,8 +104,9 @@ void sha256_digest(word32* H, BLOCK32* mblocks, int block_count) {
     H[7] = SHA256_H7;
     word32 W[64]; // message schedule values
 
-    // printf("         A        B        C        D        E        F        G        H    \n");
     for (int m = 0; m < block_count; m++) { // executed for each message block
+        if (vbtype==VERBOSE_MAX) {printf("%6s   %-5s    %-5s    %-5s    %-5s    %-5s    %-5s    %-5s    %-5s\n","","A","B","C","D","E","F","G","H");}
+
         // preparing message schedule
         W[0]  = mblocks[m].w0;
         W[1]  = mblocks[m].w1;
@@ -141,7 +150,7 @@ void sha256_digest(word32* H, BLOCK32* mblocks, int block_count) {
             c = b;
             b = a;
             a = tmp1 + tmp2;
-            // printf("t=%2u: %.8X %.8X %.8X %.8X %.8X %.8X %.8X %.8X\n", t, a, b, c, d, e, f, g, h);
+            if (vbtype==VERBOSE_MAX) {printf("t=%2u: %.8X %.8X %.8X %.8X %.8X %.8X %.8X %.8X\n", t, a, b, c, d, e, f, g, h);}
         }
 
         // compute the m'th intermediate hash values
@@ -153,5 +162,94 @@ void sha256_digest(word32* H, BLOCK32* mblocks, int block_count) {
         H[5] = f + H[5];
         H[6] = g + H[6];
         H[7] = h + H[7];
+
+        if (vbtype==VERBOSE_MAX) {printf(SEP);}
     }
+}
+
+void sha224_digest(word32* H, BLOCK32* mblocks, int block_count, verbose vbtype) {
+    word32 a = 0;
+    word32 b = 0;
+    word32 c = 0;
+    word32 d = 0;
+    word32 e = 0;
+    word32 f = 0;
+    word32 g = 0;
+    word32 h = 0;
+    word32 tmp1 = 0;
+    word32 tmp2 = 0;
+
+    // hash values, at the end of the computation this array will be the final hash
+    H[0] = SHA224_H0;
+    H[1] = SHA224_H1;
+    H[2] = SHA224_H2;
+    H[3] = SHA224_H3;
+    H[4] = SHA224_H4;
+    H[5] = SHA224_H5;
+    H[6] = SHA224_H6;
+    H[7] = SHA224_H7;
+    word32 W[64]; // message schedule values
+
+    for (int m = 0; m < block_count; m++) { // executed for each message block
+        if (vbtype==VERBOSE_MAX) {printf("%6s   %-5s    %-5s    %-5s    %-5s    %-5s    %-5s    %-5s    %-5s\n","","A","B","C","D","E","F","G","H");}
+
+        // preparing message schedule
+        W[0]  = mblocks[m].w0;
+        W[1]  = mblocks[m].w1;
+        W[2]  = mblocks[m].w2;
+        W[3]  = mblocks[m].w3;
+        W[4]  = mblocks[m].w4;
+        W[5]  = mblocks[m].w5;
+        W[6]  = mblocks[m].w6;
+        W[7]  = mblocks[m].w7;
+        W[8]  = mblocks[m].w8;
+        W[9]  = mblocks[m].w9;
+        W[10] = mblocks[m].w10;
+        W[11] = mblocks[m].w11;
+        W[12] = mblocks[m].w12;
+        W[13] = mblocks[m].w13;
+        W[14] = mblocks[m].w14;
+        W[15] = mblocks[m].w15;
+        for (int t = 16; t < 64; t++) {
+            W[t] = sha256_ssigma_1(W[t-2]) + W[t-7] + sha256_ssigma_0(W[t-15]) + W[t-16];
+        }
+
+        // init the working variables with the precedent hash values
+        a = H[0];
+        b = H[1];
+        c = H[2];
+        d = H[3];
+        e = H[4];
+        f = H[5];
+        g = H[6];
+        h = H[7];
+
+        // actual core hash process
+        for (int t = 0; t < 64; t++) {
+            tmp1 = h + sha256_bsigma_1(e) + ch(e,f,g) + SHA256_K[t] + W[t];
+            tmp2 = sha256_bsigma_0(a) + maj(a,b,c);
+            h = g;
+            g = f;
+            f = e;
+            e = d + tmp1;
+            d = c;
+            c = b;
+            b = a;
+            a = tmp1 + tmp2;
+            if (vbtype==VERBOSE_MAX) {printf("t=%2u: %.8X %.8X %.8X %.8X %.8X %.8X %.8X %.8X\n", t, a, b, c, d, e, f, g, h);}
+        }
+
+        // compute the m'th intermediate hash values
+        H[0] = a + H[0];
+        H[1] = b + H[1];
+        H[2] = c + H[2];
+        H[3] = d + H[3];
+        H[4] = e + H[4];
+        H[5] = f + H[5];
+        H[6] = g + H[6];
+        H[7] = h + H[7];
+
+        if (vbtype==VERBOSE_MAX) {printf(SEP);}
+    }
+    H[7] = 0x00; // truncate the output
 }

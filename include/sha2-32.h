@@ -14,6 +14,7 @@ word32 sha256_ssigma_0(word32 x);
 word32 sha256_ssigma_1(word32 x);
 
 void sha256_parse(BLOCK32* mblocks, word64 block_count, word8* message);
-void sha256_digest(word32* H, BLOCK32* mblocks, int block_count);
+void sha256_digest(word32* H, BLOCK32* mblocks, int block_count, verbose vbtype);
+void sha224_digest(word32* H, BLOCK32* mblocks, int block_count, verbose vbtype);
 
 #endif

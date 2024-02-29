@@ -4,6 +4,7 @@
 
 #include "../include/shacom.h"
 #include "../include/sha2-32.h"
+#include "../include/sha1.h"
 
 
 #define MSGMAXLEN 1024
@@ -11,15 +12,14 @@
 #define USAGE "USAGE: '%s' <message> [options]"
 #define USAGE_HELP "See \"'%s' --help\" for more infos."
 
-#define ARGPARSE_MODE
 
 typedef enum hash_type {
-    //               Implementation Flag
+    //               Implementation Flag, 1 if not Implemented
     //               ∨
     default_hash = 0b00000000,
     all          = 0b00000001,
     sha256       = 0b00000010,
-    sha1         = 0b10000011,
+    sha1         = 0b00000011,
     sha224       = 0b00000100,
     sha384       = 0b10000101,
     sha512       = 0b10000110,
@@ -40,21 +40,22 @@ void display_hash(word32* H, hash_type htype, verbose vblevel);
 
 
 int main(int argc, char *argv[]) {
+    /* ARGUMENT PARSING */
+
     hash_type htype = default_hash; // default hash algorithm is sha256
     verbose vblevel = VERBOSE_NONE_DEFAULT; // default verbose level is equivalent to VERBOSE_NONE
 
-    if (argc == 1) {
+    if (argc == 1) { // if there is no arguments, consider <message> as blank
         argv[1] = "\0";
     } else if (strcmp(argv[1], "-h")==0 || strcmp(argv[1], "--help")==0) {
         display_help(argv[0]);
         return EXIT_SUCCESS;
-    } else /* if (argc > 2)*/ {
-        // If the command has arguments
+    } else /* if (argc > 2)*/ { // If the command has arguments
         int retval = argparse(argc,argv,&htype,&vblevel);
         if (retval != EXIT_SUCCESS) {return EXIT_FAILURE;}
     }
 
-    if (strcmp(argv[1], " ")==0) {
+    if (strcmp(argv[1], " ")==0) { // if the <message> argument is a space, consider it as a blank string
         argv[1] = "\0";
     }
 
@@ -62,7 +63,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "ERROR: <message> IS OVER %d BYTES. NOT SUPPORTED AT THE MOMENT.", MSGMAXLEN);
         return EXIT_FAILURE;
     }
-    if ((htype & 0b10000000) == 0b10000000) {
+    if ((htype & 0b10000000) == 0b10000000) { // test for the implementation flag.
         fprintf(stderr, "WARNING: This hash algorithm is not supported yet. (\"%s\")\n" USAGE_HELP "\n", get_algorithm(htype), argv[0]);
         return EXIT_FAILURE;
     }
@@ -138,6 +139,9 @@ int main(int argc, char *argv[]) {
         case sha224:
             sha224_digest(H, mblocks, block_count, vblevel);
             break;
+        case sha1:
+            sha1_digest(H, mblocks, block_count, vblevel);
+            break;
         default: break;
     }
 
@@ -159,6 +163,9 @@ void display_hash(word32* H, hash_type htype, verbose vblevel) {
             break;
         case sha224:
             printf("%.8x%.8x%.8x%.8x%.8x%.8x%.8x",H[0],H[1],H[2],H[3],H[4],H[5],H[6]);
+            break;
+        case sha1:
+            printf("%.8x%.8x%.8x%.8x%.8x",H[0],H[1],H[2],H[3],H[4]);
             break;
         default: break;
     }
@@ -216,8 +223,8 @@ void display_help(const char* command_argv0) {
     printf("  -h                Equivalent of --help\n");
     printf("  --hash <hash>     Specifies the type of hash to use. (default sha256)\n");
     printf("         sha256     You can see the list of any valid <hash> value. The values\n");
-    printf("     [!] sha1       preceded by a \"[!]\" are not implemented yet, they will be\n");
-    printf("     [!] sha224     in the future but if you try to use them now it will throw a\n");
+    printf("         sha1       preceded by a \"[!]\" are not implemented yet, they will be\n");
+    printf("         sha224     in the future but if you try to use them now it will throw a\n");
     printf("     [!] sha384     warning message and exit.\n");
     printf("     [!] sha512\n");
     printf("     [!] sha3-224\n");

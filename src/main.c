@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../include/shacom.h"
-#include "../include/sha2-32.h"
-#include "../include/sha1.h"
+#include "shacom.h"
+#include "sha2-32.h"
+#include "sha1.h"
 
 
 #define MSGMAXLEN 1024

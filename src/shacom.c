@@ -1,4 +1,4 @@
-#include "../include/shacom.h"
+#include "shacom.h"
 
 uint16 get_zbitcount(word64 msglen, const int BLOCKSIZE) {
     uint16 lblen = (msglen+1) % BLOCKSIZE; // last block lenght

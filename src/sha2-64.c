@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../include/shacom.h"
-#include "../include/sha2-64.h"
+#include "shacom.h"
+#include "sha2-64.h"
 
 
 word64 sha512_bsigma_0(word64 x) {

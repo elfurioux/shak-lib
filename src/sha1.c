@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../include/shacom.h"
-#include "../include/sha1.h"
+#include "shacom.h"
+#include "sha1.h"
 
 
 #define SHA1_CONST_LEN 4

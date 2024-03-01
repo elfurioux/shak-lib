@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../include/shacom.h"
-#include "../include/sha2-32.h"
+#include "shacom.h"
+#include "sha2-32.h"
 
 
 #define SHA256_CONST_LEN 64

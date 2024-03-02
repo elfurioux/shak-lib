@@ -16,7 +16,7 @@ uint16 get_zbitcount(word64 msglen, const int BLOCKSIZE) {
 word64 get_block_count(word64 msglen, const int BLOCKSIZE) {
     // lenghts are in bits
 
-    word64 block_count = (msglen+1 + get_zbitcount(msglen, BLOCKSIZE) + 64)/BLOCKSIZE;
+    word64 block_count = (msglen+1 + get_zbitcount(msglen, BLOCKSIZE) + BLOCKSIZE*.125)/BLOCKSIZE;
 
     return block_count;
 }
@@ -34,7 +34,7 @@ word32 ROTL(uint8 n, word32 x) {
     n = n%32;
     return (x<<n) | (x>>(32-n));
 }
-word64 ROTR64(uint8 n, word64 x) {
+word64 ROTL64(uint8 n, word64 x) {
     n = n%64;
     return (x<<n) | (x>>(64-n));
 }
@@ -43,7 +43,7 @@ word32 ROTR(uint8 n, word32 x) {
     n = n%32;
     return (x>>n) | (x<<(32-n));
 }
-word64 ROTL64(uint8 n, word64 x) {
+word64 ROTR64(uint8 n, word64 x) {
     n = n%64;
     return (x>>n) | (x<<(64-n));
 }

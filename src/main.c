@@ -4,6 +4,7 @@
 
 #include "shacom.h"
 #include "sha2-32.h"
+#include "sha2-64.h"
 #include "sha1.h"
 
 
@@ -15,20 +16,22 @@
 
 typedef enum hash_type {
     //               Implementation Flag, 1 if not Implemented
-    //               ∨
+    //               |Blocksize flag, 0 if blocksize is 512, 1 if blocksize is 1024
+    //               ||
+    //               ∨∨
     default_hash = 0b00000000,
     all          = 0b00000001,
     sha256       = 0b00000010,
     sha1         = 0b00000011,
     sha224       = 0b00000100,
-    sha384       = 0b10000101,
-    sha512       = 0b10000110,
+    sha384       = 0b11000101,
+    sha512       = 0b01000110,
     sha3_224     = 0b10000111,
     sha3_256     = 0b10001000,
-    sha3_384     = 0b10001001,
-    sha3_512     = 0b10001010,
-    md4          = 0b10001011,
-    md5          = 0b10001100
+    sha3_384     = 0b11001001,
+    sha3_512     = 0b11001010
+    // md4          = 0b10001011,
+    // md5          = 0b10001100
 } hash_type;
 
 
@@ -37,6 +40,7 @@ void display_help(const char* command_argv0);
 int argparse(int argc, char *argv[], hash_type* htype, verbose* vblevel);
 char* get_algorithm(hash_type hash);
 void display_hash(word32* H, hash_type htype, verbose vblevel);
+void display_hash64(word64* H, hash_type htype, verbose vblevel);
 
 
 int main(int argc, char *argv[]) {
@@ -71,21 +75,26 @@ int main(int argc, char *argv[]) {
 
     /* MESSAGE PADDING */
 
+    uint16 blocksize = 512;
+    if ((htype & 0b01000000) == 0b01000000) { // test for the block size flag.
+        blocksize = 1024;
+    }
+
     word64 msglen = strlen(argv[1])*8;
-    word64 block_count = get_block_count(msglen,512);
-    uint16 zbitcount = get_zbitcount(msglen,512);
+    word64 block_count = get_block_count(msglen,blocksize);
+    uint16 zbitcount = get_zbitcount(msglen,blocksize);
 
     if (vblevel == VERBOSE_MAX) {
-        printf("l=%lld=(%lld*512+%lld) k=%d\n",msglen,msglen/512,msglen%512,zbitcount);
-        printf("l+1+k = %lld = %lldmod512\n",(msglen+1+zbitcount),(msglen+1+zbitcount)%512);
+        printf("l=%lld=(%lld*%d+%lld) k=%d\n",msglen,msglen/blocksize,blocksize,msglen%blocksize,zbitcount);
+        printf("l+1+k = %lld = %lldmod%d\n",(msglen+1+zbitcount),(msglen+1+zbitcount)%blocksize,blocksize);
         printf("block_count=%lld\n",block_count);
         printf(SEP);
     }
 
     // puts the characters in the word8 message array
-    word8 message[MSGMAXLEN];
-    int i = 0;
-    while (zbitcount > 0) {
+    word8 message[MSGMAXLEN] = {0};
+    int i;
+    for (i = 0; zbitcount > 0; i++) {
         if (i < msglen/8) {
             message[i] = argv[1][i];
         } else if (i == msglen/8) {
@@ -95,22 +104,47 @@ int main(int argc, char *argv[]) {
             zbitcount -= 8;
             message[i] = 0b00000000;
         }
-        i++;
     }
+
     // appends the message lenght to the end of the message blocks
     int j = i; // offset
+    if (blocksize == 1024) {j += 8;}
     for (i = 0; i < 8; i++) {
         message[j+i] = (word8)(msglen>>56);
         msglen = msglen<<8;
     }
 
+    /* ACTUAL HASH COMPUTATION */
 
-    /* PARSING THE MESSAGE */
+    if (blocksize == 512) {
+        BLOCK32 mblocks[block_count];
+        sha256_parse(mblocks, block_count, message);
+        word32 H[8];
 
-    BLOCK32 mblocks[block_count];
-    sha256_parse(mblocks, block_count, message);
+        if (htype == sha256 || htype == default_hash) {
+            sha256_digest(H, mblocks, block_count, vblevel);
+        } else if (htype == sha224) {
+            sha224_digest(H, mblocks, block_count, vblevel);
+        } else if (htype == sha1) {
+            sha1_digest(H, mblocks, block_count, vblevel);
+        }
 
-    if (vblevel == VERBOSE_MAX) {
+        display_hash(H, htype, vblevel);
+    } else { // blocksize == 1024
+        BLOCK64 mblocks[block_count];
+        sha512_parse(mblocks, block_count, message);
+        word64 H[8];
+
+        if (htype == sha512) {
+            sha512_digest(H, mblocks, block_count);
+        }
+
+        display_hash64(H, htype, vblevel);
+    }
+
+    return EXIT_SUCCESS;
+
+    /* if (vblevel == VERBOSE_MAX) {
         printf("%-8s%-8s %-8s%-8s %-8s%-8s %-8s%-8s %-8s%-8s %-8s%-8s %-8s%-8s %-8s%-8s\n",
             "w0", "w1", "w2", "w3", "w4", "w5", "w6", "w7",
             "w8", "w9", "w10", "w11", "w12", "w13", "w14", "w15"
@@ -124,30 +158,7 @@ int main(int argc, char *argv[]) {
             );
         }
         printf(SEP);
-    }
-
-
-    /* ACTUAL HASH COMPUTATION */
-
-    word32 H[8];
-    
-    switch (htype) {
-        case default_hash:
-        case sha256:
-            sha256_digest(H, mblocks, block_count, vblevel);
-            break;
-        case sha224:
-            sha224_digest(H, mblocks, block_count, vblevel);
-            break;
-        case sha1:
-            sha1_digest(H, mblocks, block_count, vblevel);
-            break;
-        default: break;
-    }
-
-    display_hash(H, htype, vblevel);
-
-    return EXIT_SUCCESS;
+    } */
 }
 
 
@@ -166,6 +177,21 @@ void display_hash(word32* H, hash_type htype, verbose vblevel) {
             break;
         case sha1:
             printf("%.8x%.8x%.8x%.8x%.8x",H[0],H[1],H[2],H[3],H[4]);
+            break;
+        default: break;
+    }
+
+    printf("\n");
+}
+
+void display_hash64(word64* H, hash_type htype, verbose vblevel) {
+    if (vblevel > VERBOSE_NONE) {
+        printf("%s: 0x", get_algorithm(htype));
+    }
+
+    switch (htype) {
+        case sha512:
+            printf("%.16llx%.16llx%.16llx%.16llx%.16llx%.16llx%.16llx%.16llx",H[0],H[1],H[2],H[3],H[4],H[5],H[6],H[7]);
             break;
         default: break;
     }
@@ -203,12 +229,12 @@ char* get_algorithm(hash_type hash) {
         case sha3_512:
             hashname = "sha3-512";
             break;
-        case md4:
+        /* case md4:
             hashname = "md4";
             break;
         case md5:
             hashname = "md5";
-            break;
+            break; */
         default:
             hashname = "\0";
             break;
@@ -226,12 +252,12 @@ void display_help(const char* command_argv0) {
     printf("         sha1       preceded by a \"[!]\" are not implemented yet, they will be\n");
     printf("         sha224     in the future but if you try to use them now it will throw a\n");
     printf("     [!] sha384     warning message and exit.\n");
-    printf("     [!] sha512\n");
+    printf("         sha512\n");
     printf("     [!] sha3-224\n");
     printf("     [!] sha3-256\n");
     printf("     [!] sha3-384\n");
     printf("     [!] sha3-512\n");
-    printf("  -a                Hash the <message> with all hash algorithms available.\n");
+    // printf("  -a                Hash the <message> with all hash algorithms available.\n");
     printf("  -v=[0-2]          Specifies the level of verbose. (default is 0)\n");
     printf("                    0 (VERBOSE_NONE): Just the hash hex digest, preceded by its\n");
     printf("                        algorithm name if many or if --hash is unspecified.\n");
@@ -274,18 +300,18 @@ int argparse(int argc, char *argv[], hash_type* htype, verbose* vblevel) {
                 *htype = sha3_384;
             } else if (strcmp(argv[o], "sha3-512")==0) {
                 *htype = sha3_512;
-            } else if (strcmp(argv[o], "md4")==0) {
+            } /* else if (strcmp(argv[o], "md4")==0) {
                 *htype = md4;
             } else if (strcmp(argv[o], "md5")==0) {
                 *htype = md5;
-            }
+            } */
             else {
                 fprintf(stderr, "ERROR: hash type \"%s\" not recognised.\n" USAGE_HELP "\n", argv[o], argv[0]);
                 return EXIT_FAILURE;
             }
-        } else if (strcmp(argv[o], "-a")==0) {
+        } /* else if (strcmp(argv[o], "-a")==0) {
             *htype = all;
-        } else if (strncmp(argv[o], "-v=", 3)==0 || strncmp(argv[o], "--verbose=", 10)==0) {
+        } */ else if (strncmp(argv[o], "-v=", 3)==0 || strncmp(argv[o], "--verbose=", 10)==0) {
             char chr = '\0';
             if (strlen(argv[o])==4) {
                 chr = argv[o][3];

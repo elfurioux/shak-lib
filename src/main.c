@@ -8,7 +8,7 @@
 #include "sha1.h"
 
 
-#define MSGMAXLEN 1024
+#define MSGMAXLEN 4096
 
 #define USAGE "USAGE: '%s' <message> [options]"
 #define USAGE_HELP "See \"'%s' --help\" for more infos."
@@ -37,6 +37,7 @@ typedef enum hash_type {
 
 // displays help page
 void display_help(const char* command_argv0);
+void display_version(void);
 int argparse(int argc, char *argv[], hash_type* htype, verbose* vblevel);
 char* get_algorithm(hash_type hash);
 void display_hash(word32* H, hash_type htype, verbose vblevel);
@@ -53,6 +54,9 @@ int main(int argc, char *argv[]) {
         argv[1] = "\0";
     } else if (strcmp(argv[1], "-h")==0 || strcmp(argv[1], "--help")==0) {
         display_help(argv[0]);
+        return EXIT_SUCCESS;
+    } else if (strcmp(argv[1], "--version")==0) {
+        display_version();
         return EXIT_SUCCESS;
     } else /* if (argc > 2)*/ { // If the command has arguments
         int retval = argparse(argc,argv,&htype,&vblevel);
@@ -242,9 +246,19 @@ char* get_algorithm(hash_type hash) {
     return hashname;
 }
 
+void display_version(void) {
+//  printf("================================================================================\n");
+    printf("shak version %s\n",SHAKVERSION);
+    printf("Copyright (c) 2024 elfurioux\nMIT License, built with\n%s\n\n",GCCVERSION);
+    printf("THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n");
+    printf("IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n");
+    printf("FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.\n");
+}
+
 void display_help(const char* command_argv0) {
     // printf("================================================================================\n");
     printf(USAGE "\n\n", command_argv0);
+    printf("  --version         Shows the version and copyright and exit.\n");
     printf("  --help            Shows this help page then exit.\n");
     printf("  -h                Equivalent of --help\n");
     printf("  --hash <hash>     Specifies the type of hash to use. (default sha256)\n");
@@ -267,8 +281,6 @@ void display_help(const char* command_argv0) {
     printf("                        gram does, display every computation step, might be a\n");
     printf("                        bunch of informations.\n");
     printf("  --verbose=[0-2]   equivalent of -v");
-
-    return;
 }
 
 int argparse(int argc, char *argv[], hash_type* htype, verbose* vblevel) {

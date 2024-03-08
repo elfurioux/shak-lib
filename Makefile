@@ -1,7 +1,7 @@
 .PHONY: test shak-cli win-shak-cli
 .DEFAULT_GOAL = win-shak-cli
 
-VMAJOR = 0 # Not released yet
+VMAJOR = 0# Not released yet
 VMINOR = 9
 COMMIT = $(shell git rev-list --count --all)
 VPATCH = $(shell printf %03i `expr $(COMMIT) % 1000`)

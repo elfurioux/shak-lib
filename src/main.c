@@ -10,8 +10,8 @@
 
 #define MSGMAXLEN 4096
 
-#define USAGE "USAGE: '%s' <message> [options]"
-#define USAGE_HELP "See \"'%s' --help\" for more infos."
+#define USAGE "USAGE: shak <message> [options]"
+#define USAGE_HELP "See \"shak --help\" for more infos."
 
 
 typedef enum hash_type {
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
     if ((htype & 0b10000000) == 0b10000000) { // test for the implementation flag.
-        fprintf(stderr, "WARNING: This hash algorithm is not supported yet. (\"%s\")\n" USAGE_HELP "\n", get_algorithm(htype), argv[0]);
+        fprintf(stderr, "WARNING: This hash algorithm is not supported yet. (\"%s\")\n" USAGE_HELP "\n", get_algorithm(htype));
         return EXIT_FAILURE;
     }
 
@@ -234,17 +234,22 @@ char* get_algorithm(hash_type hash) {
 }
 
 void display_version(void) {
-//  printf("================================================================================\n");
-    printf("shak version %s\n",SHAKVERSION);
+    printf("shak version %s",SHAKVERSION);
+    #ifdef SHAK_RELEASE
+    printf("\n");
     printf("Copyright (c) 2024 elfurioux\nMIT License, built with\n%s\n\n",GCCVERSION);
     printf("THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n");
     printf("IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n");
     printf("FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.\n");
+    #else
+    printf("-test\n");
+    printf("WARNING: THIS IS A TEST BUILD.\nTHINGS MIGHT GET FUNKY SOMETIMES.\n(more than usual at least)\n");
+    #endif
 }
 
 void display_help(const char* command_argv0) {
     // printf("================================================================================\n");
-    printf(USAGE "\n\n", command_argv0);
+    printf(USAGE "\n\n");
     printf("  --version         Shows the version and copyright and exit.\n");
     printf("  --help            Shows this help page then exit.\n");
     printf("  -h                Equivalent of --help\n");
@@ -273,7 +278,7 @@ int argparse(int argc, char *argv[], hash_type* htype, verbose* vblevel) {
         if (strcmp(argv[o], "--hash")==0) {
             o++;
             if (o >= argc) {
-                fprintf(stderr, "ERROR: --hash needs to be followed by a hash type.\n" USAGE_HELP "\n", argv[0]);
+                fprintf(stderr, "ERROR: --hash needs to be followed by a hash type.\n" USAGE_HELP "\n");
                 return EXIT_FAILURE;
             }
 
@@ -288,7 +293,7 @@ int argparse(int argc, char *argv[], hash_type* htype, verbose* vblevel) {
             } else if (strcmp(argv[o], "sha512")==0) {
                 *htype = sha512;
             } else {
-                fprintf(stderr, "ERROR: hash type \"%s\" not recognised.\n" USAGE_HELP "\n", argv[o], argv[0]);
+                fprintf(stderr, "ERROR: hash type \"%s\" not recognised.\n" USAGE_HELP "\n", argv[o]);
                 return EXIT_FAILURE;
             }
         } /* else if (strcmp(argv[o], "-a")==0) {
@@ -300,18 +305,18 @@ int argparse(int argc, char *argv[], hash_type* htype, verbose* vblevel) {
             } else if (strlen(argv[o])==11) {
                 chr = argv[o][10];
             } else {
-                fprintf(stderr, "ERROR: argument \"%s\" is invalid.\n" USAGE_HELP "\n", argv[o], argv[0]);
+                fprintf(stderr, "ERROR: argument \"%s\" is invalid.\n" USAGE_HELP "\n", argv[o]);
                 return EXIT_FAILURE;
             }
 
             chr -= 48; // 48 is the decimal place of the 0 in the ASCII table
             if (chr < 0 || chr > 2) {
-                fprintf(stderr, "ERROR: argument \"%s\" is invalid.\n" USAGE_HELP "\n", argv[o], argv[0]);
+                fprintf(stderr, "ERROR: argument \"%s\" is invalid.\n" USAGE_HELP "\n", argv[o]);
                 return EXIT_FAILURE;
             }
             *vblevel = chr;
         } else {
-            fprintf(stderr, "ERROR: unrecognised argument \"%s\"\n" USAGE_HELP "\n", argv[o], argv[0]);
+            fprintf(stderr, "ERROR: unrecognised argument \"%s\"\n" USAGE_HELP "\n", argv[o]);
             return EXIT_FAILURE;
         }
     }

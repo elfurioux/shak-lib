@@ -2,16 +2,11 @@
 #include <stdlib.h>
 
 #include "shacom.h"
+#include "shaconstants.h"
 #include "sha1.h"
 
 
 #define SHA1_CONST_LEN 4
-
-#define SHA1_H0 0x67452301
-#define SHA1_H1 0xefcdab89
-#define SHA1_H2 0x98badcfe
-#define SHA1_H3 0x10325476
-#define SHA1_H4 0xc3d2e1f0
 
 
 const word32 SHA1_K[SHA1_CONST_LEN] = {0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xca62c1d6};

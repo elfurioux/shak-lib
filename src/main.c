@@ -24,12 +24,12 @@ typedef enum hash_type {
     sha256       = 0b00000010,
     sha1         = 0b00000011,
     sha224       = 0b00000100,
-    sha384       = 0b11000101,
+    sha384       = 0b01000101,
     sha512       = 0b01000110,
-    sha3_224     = 0b10000111,
-    sha3_256     = 0b10001000,
-    sha3_384     = 0b11001001,
-    sha3_512     = 0b11001010
+    // sha3_224     = 0b10000111,
+    // sha3_256     = 0b10001000,
+    // sha3_384     = 0b11001001,
+    // sha3_512     = 0b11001010
     // md4          = 0b10001011,
     // md5          = 0b10001100
 } hash_type;
@@ -141,6 +141,8 @@ int main(int argc, char *argv[]) {
 
         if (htype == sha512) {
             sha512_digest(H, mblocks, block_count);
+        } else if (htype == sha384) {
+            sha384_digest(H, mblocks, block_count);
         }
 
         display_hash64(H, htype, vblevel);
@@ -197,6 +199,9 @@ void display_hash64(word64* H, hash_type htype, verbose vblevel) {
         case sha512:
             printf("%.16llx%.16llx%.16llx%.16llx%.16llx%.16llx%.16llx%.16llx",H[0],H[1],H[2],H[3],H[4],H[5],H[6],H[7]);
             break;
+        case sha384:
+            printf("%.16llx%.16llx%.16llx%.16llx%.16llx%.16llx",H[0],H[1],H[2],H[3],H[4],H[5]);
+            break;
         default: break;
     }
 
@@ -221,24 +226,6 @@ char* get_algorithm(hash_type hash) {
         case sha512:
             hashname = "sha512";
             break;
-        case sha3_224:
-            hashname = "sha3-224";
-            break;
-        case sha3_256:
-            hashname = "sha3-256";
-            break;
-        case sha3_384:
-            hashname = "sha3-384";
-            break;
-        case sha3_512:
-            hashname = "sha3-512";
-            break;
-        /* case md4:
-            hashname = "md4";
-            break;
-        case md5:
-            hashname = "md5";
-            break; */
         default:
             hashname = "\0";
             break;
@@ -262,15 +249,11 @@ void display_help(const char* command_argv0) {
     printf("  --help            Shows this help page then exit.\n");
     printf("  -h                Equivalent of --help\n");
     printf("  --hash <hash>     Specifies the type of hash to use. (default sha256)\n");
-    printf("         sha256     You can see the list of any valid <hash> value. The values\n");
-    printf("         sha1       preceded by a \"[!]\" are not implemented yet, they will be\n");
-    printf("         sha224     in the future but if you try to use them now it will throw a\n");
-    printf("     [!] sha384     warning message and exit.\n");
+    printf("         sha256     You can see the list of any valid <hash> value.\n");
+    printf("         sha1\n");
+    printf("         sha224\n");
+    printf("         sha384\n");
     printf("         sha512\n");
-    printf("     [!] sha3-224\n");
-    printf("     [!] sha3-256\n");
-    printf("     [!] sha3-384\n");
-    printf("     [!] sha3-512\n");
     // printf("  -a                Hash the <message> with all hash algorithms available.\n");
     printf("  -v=[0-2]          Specifies the level of verbose. (default is 0)\n");
     printf("                    0 (VERBOSE_NONE): Just the hash hex digest, preceded by its\n");
@@ -280,7 +263,7 @@ void display_help(const char* command_argv0) {
     printf("                    2 (VERBOSE_MAX): Goes into the detail of everything the pro-\n");
     printf("                        gram does, display every computation step, might be a\n");
     printf("                        bunch of informations.\n");
-    printf("  --verbose=[0-2]   equivalent of -v");
+    printf("  --verbose=[0-2]   equivalent of -v\n");
 }
 
 int argparse(int argc, char *argv[], hash_type* htype, verbose* vblevel) {
@@ -304,20 +287,7 @@ int argparse(int argc, char *argv[], hash_type* htype, verbose* vblevel) {
                 *htype = sha384;
             } else if (strcmp(argv[o], "sha512")==0) {
                 *htype = sha512;
-            } else if (strcmp(argv[o], "sha3-224")==0) {
-                *htype = sha3_224;
-            } else if (strcmp(argv[o], "sha3-256")==0) {
-                *htype = sha3_256;
-            } else if (strcmp(argv[o], "sha3-384")==0) {
-                *htype = sha3_384;
-            } else if (strcmp(argv[o], "sha3-512")==0) {
-                *htype = sha3_512;
-            } /* else if (strcmp(argv[o], "md4")==0) {
-                *htype = md4;
-            } else if (strcmp(argv[o], "md5")==0) {
-                *htype = md5;
-            } */
-            else {
+            } else {
                 fprintf(stderr, "ERROR: hash type \"%s\" not recognised.\n" USAGE_HELP "\n", argv[o], argv[0]);
                 return EXIT_FAILURE;
             }

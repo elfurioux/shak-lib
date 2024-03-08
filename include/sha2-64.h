@@ -15,5 +15,6 @@ word64 sha512_ssigma_1(word64 x);
 
 void sha512_parse(BLOCK64* mblocks, word64 block_count, word8* message);
 void sha512_digest(word64* H, BLOCK64* mblocks, int block_count /*, verbose vbtype */);
+void sha384_digest(word64* H, BLOCK64* mblocks, int block_count /*, verbose vbtype */);
 
 #endif

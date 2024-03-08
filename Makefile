@@ -1,7 +1,11 @@
-.PHONY: shak-cli win-shak-cli
+.PHONY: test shak-cli win-shak-cli
 .DEFAULT_GOAL = win-shak-cli
 
-VERSION = "0.9.042"
+VMAJOR = 0 # Not released yet
+VMINOR = 9
+COMMIT = $(shell git rev-list --count --all)
+VPATCH = $(shell printf %03i `expr $(COMMIT) % 1000`)
+VERSION = "$(VMAJOR).$(VMINOR).$(VPATCH)"
 
 shak-cli: src/main.c src/sha1.c src/sha2-32.c src/sha2-64.c src/shacom.c \
            include/shacom.h include/sha1.h include/sha2-32.h include/sha2-64.h

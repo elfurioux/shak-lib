@@ -1,6 +1,7 @@
 tmp/
 bin/
 .vscode
+releases
 
 # Prerequisites
 *.d

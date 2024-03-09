@@ -120,51 +120,44 @@ int main(int argc, char *argv[]) {
 
     /* ACTUAL HASH COMPUTATION */
 
-    if (blocksize == 512) {
+    if (blocksize == 512 || htype == all) {
         BLOCK32 mblocks[block_count];
         sha256_parse(mblocks, block_count, message);
         word32 H[8];
 
-        if (htype == sha256 || htype == default_hash) {
-            sha256_digest(H, mblocks, block_count, vblevel);
-        } else if (htype == sha224) {
-            sha224_digest(H, mblocks, block_count, vblevel);
-        } else if (htype == sha1) {
+        if (htype == sha1 || htype == all) {
             sha1_digest(H, mblocks, block_count, vblevel);
+            display_hash(H, sha1, vblevel);
         }
-
-        display_hash(H, htype, vblevel);
-    } else { // blocksize == 1024
+        if (htype == sha224 || htype == all) {
+            sha224_digest(H, mblocks, block_count, vblevel);
+            display_hash(H, sha224, vblevel);
+        }
+        if (htype == sha256 || htype == default_hash || htype == all) {
+            sha256_digest(H, mblocks, block_count, vblevel);
+            if (htype == all) {
+                display_hash(H, sha256, vblevel);
+            } else {
+                display_hash(H, htype, vblevel);
+            }
+        }
+    }
+    if (blocksize == 1024 || htype == all) {
         BLOCK64 mblocks[block_count];
         sha512_parse(mblocks, block_count, message);
         word64 H[8];
 
-        if (htype == sha512) {
-            sha512_digest(H, mblocks, block_count);
-        } else if (htype == sha384) {
+        if (htype == sha384 || htype == all) {
             sha384_digest(H, mblocks, block_count);
+            display_hash64(H, sha384, vblevel);
         }
-
-        display_hash64(H, htype, vblevel);
+        if (htype == sha512 || htype == all) {
+            sha512_digest(H, mblocks, block_count);
+            display_hash64(H, sha512, vblevel);
+        }
     }
 
     return EXIT_SUCCESS;
-
-    /* if (vblevel == VERBOSE_MAX) {
-        printf("%-8s%-8s %-8s%-8s %-8s%-8s %-8s%-8s %-8s%-8s %-8s%-8s %-8s%-8s %-8s%-8s\n",
-            "w0", "w1", "w2", "w3", "w4", "w5", "w6", "w7",
-            "w8", "w9", "w10", "w11", "w12", "w13", "w14", "w15"
-        );
-        for (int i = 0; i < block_count; i++) {
-            printf("%.8X%.8X %.8X%.8X %.8X%.8X %.8X%.8X %.8X%.8X %.8X%.8X %.8X%.8X %.8X%.8X\n",
-                mblocks[i].w0,mblocks[i].w1,mblocks[i].w2,mblocks[i].w3,
-                mblocks[i].w4,mblocks[i].w5,mblocks[i].w6,mblocks[i].w7,
-                mblocks[i].w8,mblocks[i].w9,mblocks[i].w10,mblocks[i].w11,
-                mblocks[i].w12,mblocks[i].w13,mblocks[i].w14,mblocks[i].w15
-            );
-        }
-        printf(SEP);
-    } */
 }
 
 
@@ -227,7 +220,7 @@ char* get_algorithm(hash_type hash) {
             hashname = "sha512";
             break;
         default:
-            hashname = "\0";
+            hashname = "???\0";
             break;
     }
     return hashname;
@@ -259,7 +252,7 @@ void display_help(const char* command_argv0) {
     printf("         sha224\n");
     printf("         sha384\n");
     printf("         sha512\n");
-    // printf("  -a                Hash the <message> with all hash algorithms available.\n");
+    printf("  -a                Hash the <message> with all hash algorithms available.\n");
     printf("  -v=[0-2]          Specifies the level of verbose. (default is 0)\n");
     printf("                    0 (VERBOSE_NONE): Just the hash hex digest, preceded by its\n");
     printf("                        algorithm name if many or if --hash is unspecified.\n");
@@ -272,6 +265,7 @@ void display_help(const char* command_argv0) {
 }
 
 int argparse(int argc, char *argv[], hash_type* htype, verbose* vblevel) {
+    int vbdef = 0;
     for (int o = 2; o < argc; o++) {
         // printf("option %d (argv[%d]): '%s'\n", o-2, o, argv[o]);
 
@@ -296,9 +290,15 @@ int argparse(int argc, char *argv[], hash_type* htype, verbose* vblevel) {
                 fprintf(stderr, "ERROR: hash type \"%s\" not recognised.\n" USAGE_HELP "\n", argv[o]);
                 return EXIT_FAILURE;
             }
-        } /* else if (strcmp(argv[o], "-a")==0) {
+        } else if (strcmp(argv[o], "-a")==0) {
             *htype = all;
-        } */ else if (strncmp(argv[o], "-v=", 3)==0 || strncmp(argv[o], "--verbose=", 10)==0) {
+            *vblevel = VERBOSE_NORMAL;
+            vbdef = 1;
+        } else if (strncmp(argv[o], "-v=", 3)==0 || strncmp(argv[o], "--verbose=", 10)==0) {
+            if (vbdef) {
+                fprintf(stderr, "ERROR: argument \"%s\" is invalid in this context.\n" USAGE_HELP "\n", argv[o]);
+                return EXIT_FAILURE;
+            }
             char chr = '\0';
             if (strlen(argv[o])==4) {
                 chr = argv[o][3];

@@ -13,6 +13,30 @@
 #define USAGE "USAGE: shak <message> [options]"
 #define USAGE_HELP "See \"shak --help\" for more infos."
 
+#define ARG_HELP_SHORT      "-h"
+#define ARG_HELP_LONG       "--help"
+#define ARG_VERSION         "--version"
+#define ARG_HASH            "--hash"
+#define ARG_ALL             "-a"
+#define ARG_VERBOSE_SHORT   "-v="
+#define ARG_VERBOSE_LONG    "--verbose="
+
+//                          "###########################################################"
+#define ARG_HELP_DESC       "Shows this help page then exit."
+#define ARG_VERSION_DESC    "Shows the version and copyright and exit."
+#define ARG_HASH_DESC_L1    "Specifies the type of hash to use. (default sha256). The"
+#define ARG_HASH_DESC_L2    "valid <hash> values are sha1, sha224, sha256, sha384 and"
+#define ARG_HASH_DESC_L3    "sha512."
+#define ARG_ALL_DESC        "Hash the <message> with all hash algorithms available."
+#define ARG_VERBOSE_DESC_L1 "Specifies the level of verbose. (default is 0)"
+#define ARG_VERBOSE_DESC_L2 "0 (VERBOSE_NONE): Just the hash hex digest, preceded by its"
+#define ARG_VERBOSE_DESC_L3 "    algorithm name if many or if --hash is unspecified."
+#define ARG_VERBOSE_DESC_L4 "1 (VERBOSE_NORMAL): Specifies the algorithm name before the"
+#define ARG_VERBOSE_DESC_L5 "    digest."
+#define ARG_VERBOSE_DESC_L6 "2 (VERBOSE_MAX): Goes into the detail of everything the pro-"
+#define ARG_VERBOSE_DESC_L7 "    gram does, display every computation step, might be a"
+#define ARG_VERBOSE_DESC_L8 "    bunch of informations."
+
 
 typedef enum hash_type {
     //               Implementation Flag, 1 if not Implemented
@@ -143,16 +167,17 @@ int main(int argc, char *argv[]) {
         }
     }
     if (blocksize == 1024 || htype == all) {
-        BLOCK64 mblocks[block_count];
-        sha512_parse(mblocks, block_count, message);
+        block_count = get_block_count(msglen,1024);
+        BLOCK64 mblocks64[block_count];
+        sha512_parse(mblocks64, block_count, message);
         word64 H[8];
 
         if (htype == sha384 || htype == all) {
-            sha384_digest(H, mblocks, block_count);
+            sha384_digest(H, mblocks64, block_count);
             display_hash64(H, sha384, vblevel);
         }
         if (htype == sha512 || htype == all) {
-            sha512_digest(H, mblocks, block_count);
+            sha512_digest(H, mblocks64, block_count);
             display_hash64(H, sha512, vblevel);
         }
     }
@@ -241,27 +266,21 @@ void display_version(void) {
 }
 
 void display_help(const char* command_argv0) {
-    // printf("================================================================================\n");
     printf(USAGE "\n\n");
-    printf("  --version         Shows the version and copyright and exit.\n");
-    printf("  --help            Shows this help page then exit.\n");
-    printf("  -h                Equivalent of --help\n");
-    printf("  --hash <hash>     Specifies the type of hash to use. (default sha256)\n");
-    printf("         sha256     You can see the list of any valid <hash> value.\n");
-    printf("         sha1\n");
-    printf("         sha224\n");
-    printf("         sha384\n");
-    printf("         sha512\n");
-    printf("  -a                Hash the <message> with all hash algorithms available.\n");
-    printf("  -v=[0-2]          Specifies the level of verbose. (default is 0)\n");
-    printf("                    0 (VERBOSE_NONE): Just the hash hex digest, preceded by its\n");
-    printf("                        algorithm name if many or if --hash is unspecified.\n");
-    printf("                    1 (VERBOSE_NORMAL): Specifies the algorithm name before the\n");
-    printf("                        digest.\n");
-    printf("                    2 (VERBOSE_MAX): Goes into the detail of everything the pro-\n");
-    printf("                        gram does, display every computation step, might be a\n");
-    printf("                        bunch of informations.\n");
-    printf("  --verbose=[0-2]   equivalent of -v\n");
+    printf("%5s%-20s%-60s\n", ARG_HELP_SHORT, ", " ARG_HELP_LONG, ARG_HELP_DESC);
+    printf("%5s%-20s%-60s\n", "", "  " ARG_VERSION, ARG_VERSION_DESC);
+    printf("%5s%-20s%-60s\n", "", "  " ARG_HASH " <hash>", ARG_HASH_DESC_L1);
+    printf("%5s%-20s%-60s\n", "", "", ARG_HASH_DESC_L2);
+    printf("%5s%-20s%-60s\n", "", "", ARG_HASH_DESC_L3);
+    printf("%5s%-20s%-60s\n", ARG_ALL, "", ARG_ALL_DESC);
+    printf("%5s%-20s%-60s\n", ARG_VERBOSE_SHORT, ", " ARG_VERBOSE_LONG "[0-2]", ARG_VERBOSE_DESC_L1);
+    printf("%5s%-20s%-60s\n", "", "", ARG_VERBOSE_DESC_L2);
+    printf("%5s%-20s%-60s\n", "", "", ARG_VERBOSE_DESC_L3);
+    printf("%5s%-20s%-60s\n", "", "", ARG_VERBOSE_DESC_L4);
+    printf("%5s%-20s%-60s\n", "", "", ARG_VERBOSE_DESC_L5);
+    printf("%5s%-20s%-60s\n", "", "", ARG_VERBOSE_DESC_L6);
+    printf("%5s%-20s%-60s\n", "", "", ARG_VERBOSE_DESC_L7);
+    printf("%5s%-20s%-60s\n", "", "", ARG_VERBOSE_DESC_L8);
 }
 
 int argparse(int argc, char *argv[], hash_type* htype, verbose* vblevel) {

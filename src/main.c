@@ -37,6 +37,10 @@
 #define ARG_VERBOSE_DESC_L7 "    gram does, display every computation step, might be a"
 #define ARG_VERBOSE_DESC_L8 "    bunch of informations."
 
+// crash(message, ...)      : Syntax of arguments is like printf
+// prints critical error to stderr and then exit the program
+#define crash(...) fprintf(stderr,__VA_ARGS__); exit(EXIT_FAILURE)
+
 
 typedef enum hash_type {
     //               Implementation Flag, 1 if not Implemented
@@ -92,12 +96,10 @@ int main(int argc, char *argv[]) {
     }
 
     if (strlen(argv[1]) > MSGMAXLEN) {
-        fprintf(stderr, "ERROR: <message> IS OVER %d BYTES. NOT SUPPORTED AT THE MOMENT.", MSGMAXLEN);
-        return EXIT_FAILURE;
+        crash("ERROR: <message> IS OVER %d BYTES. NOT SUPPORTED AT THE MOMENT.", MSGMAXLEN);
     }
     if ((htype & 0b10000000) == 0b10000000) { // test for the implementation flag.
-        fprintf(stderr, "WARNING: This hash algorithm is not supported yet. (\"%s\")\n" USAGE_HELP "\n", get_algorithm(htype));
-        return EXIT_FAILURE;
+        crash("WARNING: This hash algorithm is not supported yet. (\"%s\")\n" USAGE_HELP "\n", get_algorithm(htype));
     }
 
 
@@ -291,8 +293,7 @@ int argparse(int argc, char *argv[], hash_type* htype, verbose* vblevel) {
         if (strcmp(argv[o], "--hash")==0) {
             o++;
             if (o >= argc) {
-                fprintf(stderr, "ERROR: --hash needs to be followed by a hash type.\n" USAGE_HELP "\n");
-                return EXIT_FAILURE;
+                crash("ERROR: --hash needs to be followed by a hash type.\n" USAGE_HELP "\n");
             }
 
             if (strcmp(argv[o], "sha256")==0) {
@@ -306,8 +307,7 @@ int argparse(int argc, char *argv[], hash_type* htype, verbose* vblevel) {
             } else if (strcmp(argv[o], "sha512")==0) {
                 *htype = sha512;
             } else {
-                fprintf(stderr, "ERROR: hash type \"%s\" not recognised.\n" USAGE_HELP "\n", argv[o]);
-                return EXIT_FAILURE;
+                crash("ERROR: hash type \"%s\" not recognised.\n" USAGE_HELP "\n", argv[o]);
             }
         } else if (strcmp(argv[o], "-a")==0) {
             *htype = all;
@@ -315,8 +315,7 @@ int argparse(int argc, char *argv[], hash_type* htype, verbose* vblevel) {
             vbdef = 1;
         } else if (strncmp(argv[o], "-v=", 3)==0 || strncmp(argv[o], "--verbose=", 10)==0) {
             if (vbdef) {
-                fprintf(stderr, "ERROR: argument \"%s\" is invalid in this context.\n" USAGE_HELP "\n", argv[o]);
-                return EXIT_FAILURE;
+                crash("ERROR: argument \"%s\" is invalid in this context.\n" USAGE_HELP "\n", argv[o]);
             }
             char chr = '\0';
             if (strlen(argv[o])==4) {
@@ -324,19 +323,16 @@ int argparse(int argc, char *argv[], hash_type* htype, verbose* vblevel) {
             } else if (strlen(argv[o])==11) {
                 chr = argv[o][10];
             } else {
-                fprintf(stderr, "ERROR: argument \"%s\" is invalid.\n" USAGE_HELP "\n", argv[o]);
-                return EXIT_FAILURE;
+                crash("ERROR: argument \"%s\" is invalid.\n" USAGE_HELP "\n", argv[o]);
             }
 
             chr -= 48; // 48 is the decimal place of the 0 in the ASCII table
             if (chr < 0 || chr > 2) {
-                fprintf(stderr, "ERROR: argument \"%s\" is invalid.\n" USAGE_HELP "\n", argv[o]);
-                return EXIT_FAILURE;
+                crash("ERROR: argument \"%s\" is invalid.\n" USAGE_HELP "\n", argv[o]);
             }
             *vblevel = chr;
         } else {
-            fprintf(stderr, "ERROR: unrecognised argument \"%s\"\n" USAGE_HELP "\n", argv[o]);
-            return EXIT_FAILURE;
+            crash("ERROR: unrecognised argument \"%s\"\n" USAGE_HELP "\n", argv[o]);
         }
     }
 

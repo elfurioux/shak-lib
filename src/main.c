@@ -8,7 +8,7 @@
 #include "sha1.h"
 
 
-#define MSGMAXLEN 4096
+#define MSGMAXLEN 1024
 
 #define USAGE "USAGE: shak <message> [options]"
 #define USAGE_HELP "See \"shak --help\" for more infos."

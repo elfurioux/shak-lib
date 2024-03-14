@@ -8,8 +8,6 @@
 #include "sha1.h"
 
 
-#define MSGMAXLEN 1024
-
 #define USAGE "USAGE: shak <message> [options]"
 #define USAGE_HELP "See \"shak --help\" for more infos."
 
@@ -21,7 +19,6 @@
 #define ARG_VERBOSE_SHORT   "-v="
 #define ARG_VERBOSE_LONG    "--verbose="
 
-//                          "###########################################################"
 #define ARG_HELP_DESC       "Shows this help page then exit."
 #define ARG_VERSION_DESC    "Shows the version and copyright and exit."
 #define ARG_HASH_DESC_L1    "Specifies the type of hash to use. (default sha256). The"
@@ -37,8 +34,8 @@
 #define ARG_VERBOSE_DESC_L7 "    gram does, display every computation step, might be a"
 #define ARG_VERBOSE_DESC_L8 "    bunch of informations."
 
-// crash(message, ...)      : Syntax of arguments is like printf
-// prints critical error to stderr and then exit the program
+// crash(`const char *__format`, `...`) : Syntax of arguments is like `printf()`
+// prints critical error to `stderr` and then exit the program
 #define crash(...) fprintf(stderr,__VA_ARGS__); exit(EXIT_FAILURE)
 
 
@@ -64,7 +61,7 @@ typedef enum hash_type {
 
 
 // displays help page
-void display_help(const char* command_argv0);
+void display_help(void);
 void display_version(void);
 int argparse(int argc, char *argv[], hash_type* htype, verbose* vblevel);
 char* get_algorithm(hash_type hash);
@@ -81,7 +78,7 @@ int main(int argc, char *argv[]) {
     if (argc == 1) { // if there is no arguments, consider <message> as blank
         argv[1] = "\0";
     } else if (strcmp(argv[1], "-h")==0 || strcmp(argv[1], "--help")==0) {
-        display_help(argv[0]);
+        display_help();
         return EXIT_SUCCESS;
     } else if (strcmp(argv[1], "--version")==0) {
         display_version();
@@ -95,9 +92,6 @@ int main(int argc, char *argv[]) {
         argv[1] = "\0";
     }
 
-    if (strlen(argv[1]) > MSGMAXLEN) {
-        crash("ERROR: <message> IS OVER %d BYTES. NOT SUPPORTED AT THE MOMENT.", MSGMAXLEN);
-    }
     if ((htype & 0b10000000) == 0b10000000) { // test for the implementation flag.
         crash("WARNING: This hash algorithm is not supported yet. (\"%s\")\n" USAGE_HELP "\n", get_algorithm(htype));
     }
@@ -267,7 +261,7 @@ void display_version(void) {
     #endif
 }
 
-void display_help(const char* command_argv0) {
+void display_help(void) {
     printf(USAGE "\n\n");
     printf("%5s%-20s%-60s\n", ARG_HELP_SHORT, ", " ARG_HELP_LONG, ARG_HELP_DESC);
     printf("%5s%-20s%-60s\n", "", "  " ARG_VERSION, ARG_VERSION_DESC);

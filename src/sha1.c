@@ -26,14 +26,7 @@ word32 sha1_f(uint8 t, word32 x, word32 y, word32 z) {
     return -1;
 }
 
-void sha1_digest(word32* H, BLOCK32* mblocks, int block_count, verbose vbtype) {
-    word32 a = 0;
-    word32 b = 0;
-    word32 c = 0;
-    word32 d = 0;
-    word32 e = 0;
-    word32 tmp = 0;
-
+void sha1_setconstants(word32* H) {
     // hash values, at the end of the computation this array will be the final hash
     H[0] = SHA1_H0;
     H[1] = SHA1_H1;
@@ -43,6 +36,16 @@ void sha1_digest(word32* H, BLOCK32* mblocks, int block_count, verbose vbtype) {
     H[5] = 0x00; // not used here
     H[6] = 0x00; // not used here
     H[7] = 0x00; // not used here
+}
+
+void sha1_digest(word32* H, BLOCK32* mblocks, int block_count, verbose vbtype) {
+    word32 a = 0;
+    word32 b = 0;
+    word32 c = 0;
+    word32 d = 0;
+    word32 e = 0;
+    word32 tmp = 0;
+
     word32 W[80]; // message schedule values
 
     for (int m = 0; m < block_count; m++) { // executed for each message block

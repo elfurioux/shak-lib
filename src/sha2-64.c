@@ -103,6 +103,30 @@ void sha512_parse(BLOCK64* mblocks, word64 block_count, word8* message) {
     }
 }
 
+void sha512_setconstants(word64* H) {
+    // hash values, at the end of the computation this array will be the final hash
+    H[0] = SHA512_H0;
+    H[1] = SHA512_H1;
+    H[2] = SHA512_H2;
+    H[3] = SHA512_H3;
+    H[4] = SHA512_H4;
+    H[5] = SHA512_H5;
+    H[6] = SHA512_H6;
+    H[7] = SHA512_H7;
+}
+
+void sha384_setconstants(word64* H) {
+    // hash values, at the end of the computation this array will be the final hash
+    H[0] = SHA384_H0;
+    H[1] = SHA384_H1;
+    H[2] = SHA384_H2;
+    H[3] = SHA384_H3;
+    H[4] = SHA384_H4;
+    H[5] = SHA384_H5;
+    H[6] = SHA384_H6;
+    H[7] = SHA384_H7;
+}
+
 void sha512_digest(word64* H, BLOCK64* mblocks, int block_count /*, verbose vbtype */) {
     word64 a = 0;
     word64 b = 0;
@@ -115,15 +139,6 @@ void sha512_digest(word64* H, BLOCK64* mblocks, int block_count /*, verbose vbty
     word64 tmp1 = 0;
     word64 tmp2 = 0;
 
-    // hash values, at the end of the computation this array will be the final hash
-    H[0] = SHA512_H0;
-    H[1] = SHA512_H1;
-    H[2] = SHA512_H2;
-    H[3] = SHA512_H3;
-    H[4] = SHA512_H4;
-    H[5] = SHA512_H5;
-    H[6] = SHA512_H6;
-    H[7] = SHA512_H7;
     word64 W[80] = {0}; // message schedule values
 
     for (int m = 0; m < block_count; m++) {
@@ -184,89 +199,3 @@ void sha512_digest(word64* H, BLOCK64* mblocks, int block_count /*, verbose vbty
         H[7] = h + H[7];
     }
 }
-
-// this is a temporary solution, some SERIOUS refactoring needs to be done
-void sha384_digest(word64* H, BLOCK64* mblocks, int block_count /*, verbose vbtype */) {
-    word64 a = 0;
-    word64 b = 0;
-    word64 c = 0;
-    word64 d = 0;
-    word64 e = 0;
-    word64 f = 0;
-    word64 g = 0;
-    word64 h = 0;
-    word64 tmp1 = 0;
-    word64 tmp2 = 0;
-
-    // hash values, at the end of the computation this array will be the final hash
-    H[0] = SHA384_H0;
-    H[1] = SHA384_H1;
-    H[2] = SHA384_H2;
-    H[3] = SHA384_H3;
-    H[4] = SHA384_H4;
-    H[5] = SHA384_H5;
-    H[6] = SHA384_H6;
-    H[7] = SHA384_H7;
-    word64 W[80] = {0}; // message schedule values
-
-    for (int m = 0; m < block_count; m++) {
-
-        // preparing message schedule
-        W[0]  = mblocks[m].w0;
-        W[1]  = mblocks[m].w1;
-        W[2]  = mblocks[m].w2;
-        W[3]  = mblocks[m].w3;
-        W[4]  = mblocks[m].w4;
-        W[5]  = mblocks[m].w5;
-        W[6]  = mblocks[m].w6;
-        W[7]  = mblocks[m].w7;
-        W[8]  = mblocks[m].w8;
-        W[9]  = mblocks[m].w9;
-        W[10] = mblocks[m].w10;
-        W[11] = mblocks[m].w11;
-        W[12] = mblocks[m].w12;
-        W[13] = mblocks[m].w13;
-        W[14] = mblocks[m].w14;
-        W[15] = mblocks[m].w15;
-        for (int t = 16; t < 80; t++) {
-            W[t] = sha512_ssigma_1(W[t-2]) + W[t-7] + sha512_ssigma_0(W[t-15]) + W[t-16];
-        }
-
-        // init the working variables with the precedent hash values
-        a = H[0];
-        b = H[1];
-        c = H[2];
-        d = H[3];
-        e = H[4];
-        f = H[5];
-        g = H[6];
-        h = H[7];
-
-        // actual core hash process
-        for (int t = 0; t < 80; t++) {
-            tmp1 = h + sha512_bsigma_1(e) + ch64(e,f,g) + SHA512_K[t] + W[t];
-            tmp2 = sha512_bsigma_0(a) + maj64(a,b,c);
-            h = g;
-            g = f;
-            f = e;
-            e = d + tmp1;
-            d = c;
-            c = b;
-            b = a;
-            a = tmp1 + tmp2;
-        }
-
-        // compute the m'th intermediate hash values
-        H[0] = a + H[0];
-        H[1] = b + H[1];
-        H[2] = c + H[2];
-        H[3] = d + H[3];
-        H[4] = e + H[4];
-        H[5] = f + H[5];
-        H[6] = g + H[6];
-        H[7] = h + H[7];
-    }
-    H[6] = 0x00; // truncate the output
-    H[7] = 0x00; // truncate the output
-}
-

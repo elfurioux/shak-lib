@@ -13,8 +13,9 @@ word32 sha256_ssigma_0(word32 x);
 // {256} σ₁(𝑥) = ROTR¹⁷(𝑥) ⊕ ROTR¹⁹(𝑥) ⊕ SHR¹⁰(𝑥)
 word32 sha256_ssigma_1(word32 x);
 
+void sha256_setconstants(word32* H);
+void sha224_setconstants(word32* H);
 void sha256_parse(BLOCK32* mblocks, word64 block_count, word8* message);
 void sha256_digest(word32* H, BLOCK32* mblocks, int block_count, verbose vbtype);
-void sha224_digest(word32* H, BLOCK32* mblocks, int block_count, verbose vbtype);
 
 #endif

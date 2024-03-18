@@ -116,7 +116,7 @@ int main(int argc, char *argv[]) {
     }
 
     // puts the characters in the word8 message array
-    word8 message[MSGMAXLEN] = {0};
+    word8 message[4096] = {0};
     int i;
     for (i = 0; zbitcount > 0; i++) {
         if (i < msglen/8) {
@@ -141,6 +141,8 @@ int main(int argc, char *argv[]) {
     /* ACTUAL HASH COMPUTATION */
 
     if (blocksize == 512 || htype == all) {
+        block_count = get_block_count(msglen,512);
+        
         BLOCK32 mblocks[block_count];
         sha256_parse(mblocks, block_count, message);
         word32 H[8];
@@ -164,6 +166,7 @@ int main(int argc, char *argv[]) {
     }
     if (blocksize == 1024 || htype == all) {
         block_count = get_block_count(msglen,1024);
+
         BLOCK64 mblocks64[block_count];
         sha512_parse(mblocks64, block_count, message);
         word64 H[8];

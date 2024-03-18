@@ -3,9 +3,9 @@
 #include <string.h>
 
 #include "shacom.h"
+#include "sha1.h"
 #include "sha2-32.h"
 #include "sha2-64.h"
-#include "sha1.h"
 
 
 #define USAGE "USAGE: shak <message> [options]"
@@ -45,9 +45,9 @@ typedef enum hash_type {
     //               ||
     //               ∨∨
     default_hash = 0b00000000,
-    all          = 0b00000001,
-    sha256       = 0b00000010,
+    // all          = 0b00000001,
     sha1         = 0b00000011,
+    sha256       = 0b00000010,
     sha224       = 0b00000100,
     sha384       = 0b01000101,
     sha512       = 0b01000110,
@@ -140,45 +140,41 @@ int main(int argc, char *argv[]) {
 
     /* ACTUAL HASH COMPUTATION */
 
-    if (blocksize == 512 || htype == all) {
+    if (blocksize == 512) {
         block_count = get_block_count(msglen,512);
         
         BLOCK32 mblocks[block_count];
         sha256_parse(mblocks, block_count, message);
         word32 H[8];
 
-        if (htype == sha1 || htype == all) {
+        switch (htype) {
+            case sha1: sha1_setconstants(H); break;
+            case sha224: sha224_setconstants(H); break;
+            case sha256: sha256_setconstants(H); break;
+            default: crash("?"); break;
+        }
+
+        if (htype == sha1) {
             sha1_digest(H, mblocks, block_count, vblevel);
-            display_hash(H, sha1, vblevel);
-        }
-        if (htype == sha224 || htype == all) {
-            sha224_digest(H, mblocks, block_count, vblevel);
-            display_hash(H, sha224, vblevel);
-        }
-        if (htype == sha256 || htype == default_hash || htype == all) {
+        } else {
             sha256_digest(H, mblocks, block_count, vblevel);
-            if (htype == all) {
-                display_hash(H, sha256, vblevel);
-            } else {
-                display_hash(H, htype, vblevel);
-            }
         }
+        display_hash(H, htype, vblevel);
     }
-    if (blocksize == 1024 || htype == all) {
+    if (blocksize == 1024) {
         block_count = get_block_count(msglen,1024);
 
         BLOCK64 mblocks64[block_count];
         sha512_parse(mblocks64, block_count, message);
         word64 H[8];
 
-        if (htype == sha384 || htype == all) {
-            sha384_digest(H, mblocks64, block_count);
-            display_hash64(H, sha384, vblevel);
+        switch (htype) {
+            case sha384: sha384_setconstants(H); break;
+            case sha512: sha512_setconstants(H); break;
+            default: crash("?"); break;
         }
-        if (htype == sha512 || htype == all) {
-            sha512_digest(H, mblocks64, block_count);
-            display_hash64(H, sha512, vblevel);
-        }
+        sha512_digest(H, mblocks64, block_count);
+        display_hash64(H, htype, vblevel);
     }
 
     return EXIT_SUCCESS;
@@ -271,7 +267,7 @@ void display_help(void) {
     printf("%5s%-20s%-60s\n", "", "  " ARG_HASH " <hash>", ARG_HASH_DESC_L1);
     printf("%5s%-20s%-60s\n", "", "", ARG_HASH_DESC_L2);
     printf("%5s%-20s%-60s\n", "", "", ARG_HASH_DESC_L3);
-    printf("%5s%-20s%-60s\n", ARG_ALL, "", ARG_ALL_DESC);
+    // printf("%5s%-20s%-60s\n", ARG_ALL, "", ARG_ALL_DESC);
     printf("%5s%-20s%-60s\n", ARG_VERBOSE_SHORT, ", " ARG_VERBOSE_LONG "[0-2]", ARG_VERBOSE_DESC_L1);
     printf("%5s%-20s%-60s\n", "", "", ARG_VERBOSE_DESC_L2);
     printf("%5s%-20s%-60s\n", "", "", ARG_VERBOSE_DESC_L3);
@@ -307,13 +303,12 @@ int argparse(int argc, char *argv[], hash_type* htype, verbose* vblevel) {
                 crash("ERROR: hash type \"%s\" not recognised.\n" USAGE_HELP "\n", argv[o]);
             }
         } else if (strcmp(argv[o], "-a")==0) {
-            *htype = all;
-            *vblevel = VERBOSE_NORMAL;
-            vbdef = 1;
+            crash("ERROR: -a option is temporarily disabled.");
         } else if (strncmp(argv[o], "-v=", 3)==0 || strncmp(argv[o], "--verbose=", 10)==0) {
             if (vbdef) {
                 crash("ERROR: argument \"%s\" is invalid in this context.\n" USAGE_HELP "\n", argv[o]);
             }
+            vbdef = 1;
             char chr = '\0';
             if (strlen(argv[o])==4) {
                 chr = argv[o][3];
